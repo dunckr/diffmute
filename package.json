@@ -1,0 +1,24 @@
+{
+  "name": "diffmute",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Collapse or hide noisy files on GitHub pull request diffs.",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/build.mjs --run",
+    "lint": "npm run build && web-ext lint",
+    "package": "npm run build && web-ext build --overwrite-dest",
+    "sign": "npm run build && node --env-file-if-exists=.env node_modules/web-ext/bin/web-ext.js sign --channel unlisted",
+    "install:firefox": "npm run sign && open -a Firefox \"$(ls -t web-ext-artifacts/*.xpi | head -1)\""
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/webextension-polyfill": "^0.12.6",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "web-ext": "^8.3.0"
+  },
+  "type": "module"
+}
