@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>diffmute rules</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>diffmute</h1>
+        <p class="muted">
+          Glob rules for files to collapse or hide on GitHub pull request diffs. A pattern
+          without <code>/</code> matches the file name at any depth, <code>**/</code> matches
+          any number of folders, and a leading <code>/</code> anchors to the repo root. The
+          first matching category wins.
+        </p>
+      </header>
+
+      <section>
+        <h2>Categories</h2>
+        <div id="categories"></div>
+        <button type="button" id="add-category">Add category</button>
+      </section>
+
+      <section>
+        <h2>Per-repo overrides</h2>
+        <p class="muted">Keyed by <code>owner/repo</code>. Overrides apply on top of the categories above.</p>
+        <div id="repos"></div>
+        <form id="add-repo">
+          <input id="repo-name" placeholder="owner/repo" pattern="[^/\s]+/[^/\s]+" required />
+          <button type="submit">Add repo</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>Test a path</h2>
+        <div class="row">
+          <input id="test-repo" placeholder="owner/repo (optional)" />
+          <input id="test-path" placeholder="src/__tests__/app.test.ts" />
+        </div>
+        <p id="test-result" class="muted">Type a path to see which category matches.</p>
+      </section>
+
+      <footer>
+        <button type="button" id="save" class="primary">Save</button>
+        <button type="button" id="reset">Reset to defaults</button>
+        <span id="status" class="muted" role="status"></span>
+      </footer>
+    </main>
+
+    <template id="category-tpl">
+      <fieldset class="card category">
+        <div class="row">
+          <input class="name" aria-label="Category name" />
+          <label><input type="checkbox" class="enabled" /> enabled</label>
+          <select class="mode" aria-label="Mode">
+            <option value="collapse">collapse</option>
+            <option value="hide">hide</option>
+          </select>
+          <button type="button" class="remove">Remove</button>
+        </div>
+        <textarea class="patterns" rows="6" spellcheck="false" aria-label="Glob patterns, one per line"></textarea>
+      </fieldset>
+    </template>
+
+    <template id="repo-tpl">
+      <fieldset class="card repo">
+        <div class="row">
+          <strong class="repo-name"></strong>
+          <label><input type="checkbox" class="off" /> turn off for this repo</label>
+          <button type="button" class="remove">Remove</button>
+        </div>
+        <div class="overrides"></div>
+        <label class="stack">
+          Never mute (globs, one per line)
+          <textarea class="ignore" rows="3" spellcheck="false"></textarea>
+        </label>
+      </fieldset>
+    </template>
+
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+.diffmute-hidden,
+.diffmute-tree-hidden {
+  display: none !important;
+}
+
+/* Fallback when no GitHub collapse button is found: keep only the header. */
+.diffmute-collapsed > :not(:first-child) {
+  display: none !important;
+}
+
+.diffmute-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--fgColor-default, #1f2328);
+  background: var(--bgColor-muted, #f6f8fa);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+}
+
+.diffmute-summary {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.diffmute-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.diffmute-bar button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--fgColor-default, #1f2328);
+  background: transparent;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+}
+
+.diffmute-bar button:hover {
+  background: var(--bgColor-neutral-muted, rgba(129, 139, 152, 0.12));
+}
+
+.diffmute-bar .diffmute-chip[aria-pressed="true"] {
+  color: var(--fgColor-onEmphasis, #fff);
+  background: var(--bgColor-neutral-emphasis, #59636e);
+  border-color: transparent;
+}
+
+.diffmute-bar .diffmute-chip[aria-pressed="false"] {
+  text-decoration: line-through;
+  color: var(--fgColor-muted, #59636e);
+}
