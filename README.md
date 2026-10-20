@@ -9,6 +9,7 @@ A toolbar at the top of the diff shows what was muted ("Collapsed 3 lockfiles, 1
 - Runs on `/pull/N/files`, `/pull/N/changes` and `/pull/N/commits/<sha>`. The content script is injected on all of `github.com` because GitHub navigates between PR tabs without a full page load.
 - Each file container has `id="diff-<sha256(path)>"`, so files are keyed by that hash and the path is confirmed by hashing candidates from the header. Class names are not used.
 - Collapse clicks GitHub's own toggle button so its UI state stays consistent. Hide sets `display: none` on the file and its file tree entry.
+- Folders in the file tree whose files are all muted (such as `__tests__/`) are collapsed, and reopen when any of their files is shown again. A folder you open by hand stays open.
 - A `MutationObserver` picks up lazily loaded diffs and SPA navigation.
 
 ## Rules
