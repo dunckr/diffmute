@@ -10,7 +10,7 @@
     "start": "node scripts/build.mjs --run",
     "lint": "npm run build && web-ext lint",
     "package": "npm run build && web-ext build --overwrite-dest",
-    "sign": "npm run build && node --env-file-if-exists=.env node_modules/web-ext/bin/web-ext.js sign --channel unlisted",
+    "sign": "node scripts/build.mjs --stamp && node --env-file-if-exists=.env node_modules/web-ext/bin/web-ext.js sign --channel unlisted",
     "install:firefox": "npm run sign && open -a Firefox \"$(ls -t web-ext-artifacts/*.xpi | head -1)\""
   },
   "devDependencies": {
