@@ -152,6 +152,61 @@ function applyTree(hiddenHashes: string[]): void {
   for (const n of want) n.classList.add("diffmute-tree-hidden");
 }
 
+const TREE_ITEM = '[role="treeitem"]';
+const TREE_GROUP = '[role="group"]';
+
+function treeFilePath(node: Element): string | null {
+  const text = clean(node.querySelector(":scope > [data-filterable-item-text], :scope > * > [data-filterable-item-text]")?.textContent);
+  if (text) return text;
+  const hash =
+    node.id.match(/diff-([0-9a-f]{64})$/)?.[1] ??
+    node.querySelector('a[href*="#diff-"]')?.getAttribute("href")?.match(/#diff-([0-9a-f]{64})/)?.[1];
+  return hash ? (pathCache.get(hash) ?? null) : null;
+}
+
+function folderToggle(dir: Element): { el: HTMLElement; expanded: boolean } | null {
+  const btn = dir.querySelector<HTMLElement>(":scope > button[aria-expanded], :scope > div > button[aria-expanded]");
+  if (btn) return { el: btn, expanded: btn.getAttribute("aria-expanded") === "true" };
+  const content = dir.firstElementChild as HTMLElement | null;
+  if (dir.hasAttribute("aria-expanded") && content && !content.matches(TREE_GROUP)) {
+    return { el: content, expanded: dir.getAttribute("aria-expanded") === "true" };
+  }
+  return null;
+}
+
+// Collapses sidebar folders whose files are all muted (e.g. __tests__/),
+// and reopens them once any of their files is shown again. Folders the
+// user reopens by hand are left alone.
+function applyFolders(rules: Rules): void {
+  const muted = new Map<Element, boolean>();
+  for (const node of document.querySelectorAll(TREE_ITEM)) {
+    if (node.querySelector(TREE_GROUP)) continue;
+    const path = treeFilePath(node);
+    const cat = path ? classify(path, rules) : null;
+    muted.set(node, !!cat && !shown.has(cat.id));
+  }
+  const allMuted = (dir: Element) => {
+    const files = [...dir.querySelectorAll(TREE_ITEM)].filter((n) => muted.has(n));
+    return files.length > 0 && files.every((n) => muted.get(n));
+  };
+
+  for (const dir of document.querySelectorAll<HTMLElement>(TREE_ITEM)) {
+    if (!dir.querySelector(TREE_GROUP)) continue;
+    const parent = dir.parentElement?.closest(TREE_ITEM);
+    const want = allMuted(dir) && !(parent && allMuted(parent));
+    const toggle = folderToggle(dir);
+    if (!toggle) continue;
+    if (want && !dir.dataset.diffmuteFolder) {
+      dir.dataset.diffmuteFolder = "1";
+      if (toggle.expanded) toggle.el.click();
+      else dir.dataset.diffmuteFolder = "already";
+    } else if (!want && dir.dataset.diffmuteFolder) {
+      if (dir.dataset.diffmuteFolder === "1" && !toggle.expanded && !(parent && allMuted(parent))) toggle.el.click();
+      delete dir.dataset.diffmuteFolder;
+    }
+  }
+}
+
 function placeBar(fileEls: HTMLElement[]): HTMLElement {
   bar ??= createBar();
   if (bar.isConnected) return bar;
@@ -286,8 +341,6 @@ async function scan(): Promise<void> {
     const rules = resolveRules(config, p.repo);
     const byId = new Map(rules.categories.map((c) => [c.id, c]));
     const fileEls = [...document.querySelectorAll<HTMLElement>('[id^="diff-"]')].filter((e) => FILE_ID.test(e.id));
-    if (!fileEls.length) return;
-
     for (const el of fileEls) {
       const hash = el.id.slice(5);
       const path = await resolvePath(el, hash);
@@ -301,6 +354,8 @@ async function scan(): Promise<void> {
       .filter(([, id]) => id && byId.get(id)?.mode === "hide" && !shown.has(id))
       .map(([hash]) => hash);
     applyTree(hidden);
+    applyFolders(rules);
+    if (!fileEls.length) return;
 
     if (config.repos[p.repo.toLowerCase()]?.off) {
       bar?.remove();
