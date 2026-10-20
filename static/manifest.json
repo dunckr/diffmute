@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "diffmute",
-  "version": "0.1.1",
   "description": "Collapse or hide noisy files (tests, lockfiles, snapshots, generated code) on GitHub pull request diffs.",
   "browser_specific_settings": {
     "gecko": {
       "id": "diffmute@dunckr",
       "strict_min_version": "121.0",
-      "data_collection_permissions": { "required": ["none"] }
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "permissions": ["storage"],

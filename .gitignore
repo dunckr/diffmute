@@ -3,3 +3,4 @@ web-ext-artifacts/
 .firefox-profile/
 dist/
 .env
+dist-chrome/

@@ -11,38 +11,68 @@
       <header>
         <h1>diffmute</h1>
         <p class="muted">
-          Glob rules for files to collapse or hide on GitHub pull request diffs. A pattern
-          without <code>/</code> matches the file name at any depth, <code>**/</code> matches
-          any number of folders, and a leading <code>/</code> anchors to the repo root. The
-          first matching category wins.
+          Glob rules for files to collapse or hide on GitHub pull request diffs.
+          A pattern without <code>/</code> matches the file name at any depth,
+          <code>**/</code> matches any number of folders, and a leading
+          <code>/</code> anchors to the repo root. The first matching category
+          wins.
         </p>
       </header>
 
       <section>
         <h2>Review flow</h2>
         <div class="card stack-list">
-          <label><input type="checkbox" id="feature-revisit" /> Collapse files you already read</label>
+          <label
+            ><input type="checkbox" id="feature-revisit" /> Collapse files you
+            already read</label
+          >
           <p class="muted hint">
-            Files you have scrolled through or marked viewed are remembered per pull request. On your next
-            visit, files whose changes are the same are collapsed and new or changed files get a badge.
+            Files you have scrolled through or marked viewed are remembered per
+            pull request. On your next visit, files whose changes are the same
+            are collapsed and new or changed files get a badge.
           </p>
-          <label><input type="checkbox" id="feature-order" /> Show a reading order</label>
+          <label
+            ><input type="checkbox" id="feature-order" /> Show a reading
+            order</label
+          >
           <p class="muted hint">
-            Groups files so types and schema come first, then logic, UI, tests and config. Authors can pin
-            files by adding a "Review order" heading followed by a list of paths to the pull request
-            description.
+            Groups files so types and schema come first, then logic, UI, tests
+            and config. Authors can pin files by adding a "Review order" heading
+            followed by a list of paths to the pull request description.
           </p>
-          <label><input type="checkbox" id="feature-keys" /> Keyboard shortcuts</label>
+          <label
+            ><input type="checkbox" id="feature-keys" /> Keyboard
+            shortcuts</label
+          >
           <p class="muted hint">
-            <kbd>]</kbd> next file to review, <kbd>[</kbd> previous, <kbd>v</kbd> mark viewed and go to next,
-            <kbd>x</kbd> collapse or expand, <kbd>h</kbd> help.
+            <kbd>]</kbd> next file to review, <kbd>[</kbd> previous,
+            <kbd>v</kbd> mark viewed and go to next, <kbd>x</kbd> collapse or
+            expand, <kbd>h</kbd> help.
           </p>
         </div>
         <details class="card">
           <summary>Reading order tiers</summary>
-          <p class="muted">Files matching none of these are read as logic, after types and schema.</p>
+          <p class="muted">
+            Files matching none of these are read as logic, after types and
+            schema.
+          </p>
           <div id="tiers"></div>
         </details>
+      </section>
+
+      <section>
+        <h2>Never mute</h2>
+        <p class="muted">
+          Globs for files that are never muted in any repo. A line starting with
+          <code>!</code> takes a path back out, in this list and in category
+          patterns.
+        </p>
+        <textarea
+          id="global-ignore"
+          rows="3"
+          spellcheck="false"
+          aria-label="Never mute globs"
+        ></textarea>
       </section>
 
       <section>
@@ -53,10 +83,18 @@
 
       <section>
         <h2>Per-repo overrides</h2>
-        <p class="muted">Keyed by <code>owner/repo</code>. Overrides apply on top of the categories above.</p>
+        <p class="muted">
+          Keyed by <code>owner/repo</code>. Overrides apply on top of the
+          categories above.
+        </p>
         <div id="repos"></div>
         <form id="add-repo">
-          <input id="repo-name" placeholder="owner/repo" pattern="[^/\s]+/[^/\s]+" required />
+          <input
+            id="repo-name"
+            placeholder="owner/repo"
+            pattern="[^/\s]+/[^/\s]+"
+            required
+          />
           <button type="submit">Add repo</button>
         </form>
       </section>
@@ -67,12 +105,22 @@
           <input id="test-repo" placeholder="owner/repo (optional)" />
           <input id="test-path" placeholder="src/__tests__/app.test.ts" />
         </div>
-        <p id="test-result" class="muted">Type a path to see which category matches.</p>
+        <p id="test-result" class="muted">
+          Type a path to see which category matches.
+        </p>
       </section>
 
       <footer>
         <button type="button" id="save" class="primary">Save</button>
         <button type="button" id="reset">Reset to defaults</button>
+        <button type="button" id="export">Export</button>
+        <label class="button"
+          >Import<input
+            type="file"
+            id="import"
+            accept="application/json"
+            hidden
+        /></label>
         <span id="status" class="muted" role="status"></span>
       </footer>
     </main>
@@ -88,7 +136,12 @@
           </select>
           <button type="button" class="remove">Remove</button>
         </div>
-        <textarea class="patterns" rows="6" spellcheck="false" aria-label="Glob patterns, one per line"></textarea>
+        <textarea
+          class="patterns"
+          rows="6"
+          spellcheck="false"
+          aria-label="Glob patterns, one per line"
+        ></textarea>
       </fieldset>
     </template>
 
@@ -117,7 +170,9 @@
       <fieldset class="card repo">
         <div class="row">
           <strong class="repo-name"></strong>
-          <label><input type="checkbox" class="off" /> turn off for this repo</label>
+          <label
+            ><input type="checkbox" class="off" /> turn off for this repo</label
+          >
           <button type="button" class="remove">Remove</button>
         </div>
         <div class="overrides"></div>
