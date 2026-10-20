@@ -1,0 +1,6 @@
+node_modules
+dist
+dist-chrome
+web-ext-artifacts
+.firefox-profile
+package-lock.json

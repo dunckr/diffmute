@@ -2,26 +2,36 @@
 // and hands plain strings to these, so they can be tested without a browser.
 
 export interface Counts {
-  changes: number;
   additions: number;
+  changes: number;
   deletions: number;
 }
 
-const COUNTS = /([\d,]+)\s+changes?:\s*([\d,]+)\s+additions?\s*&\s*([\d,]+)\s+deletions?/i;
+const COUNTS =
+  /([\d,]+)\s+changes?:\s*([\d,]+)\s+additions?\s*&\s*([\d,]+)\s+deletions?/i;
 
-const num = (s: string) => Number(s.replace(/,/g, ""));
+const toNumber = (s: string) => Number(s.replaceAll(',', ''));
 
 // Parses GitHub's "12 changes: 7 additions & 5 deletions" header text.
 export function parseCounts(text: string): Counts | null {
   const m = text.match(COUNTS);
-  return m ? { changes: num(m[1]), additions: num(m[2]), deletions: num(m[3]) } : null;
+  return m
+    ? {
+        additions: toNumber(m[2]),
+        changes: toNumber(m[1]),
+        deletions: toNumber(m[3]),
+      }
+    : null;
 }
 
 // True when removed and added lines carry the same text once all whitespace
 // is dropped, so reindenting and rewrapping count but moving code between
 // lines in a different order does not. Needs at least one changed line.
 export function whitespaceOnly(removed: string[], added: string[]): boolean {
-  if (!removed.length && !added.length) return false;
-  const squash = (lines: string[]) => lines.join("").replace(/\s+/g, "");
+  if (removed.length === 0 && added.length === 0) return false;
   return squash(removed) === squash(added);
+}
+
+function squash(lines: string[]): string {
+  return lines.join('').replaceAll(/\s+/g, '');
 }

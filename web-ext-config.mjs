@@ -1,4 +1,4 @@
 export default {
-  sourceDir: "dist",
-  artifactsDir: "web-ext-artifacts",
+  artifactsDir: 'web-ext-artifacts',
+  sourceDir: 'dist',
 };
