@@ -19,6 +19,33 @@
       </header>
 
       <section>
+        <h2>Review flow</h2>
+        <div class="card stack-list">
+          <label><input type="checkbox" id="feature-revisit" /> Collapse files you already read</label>
+          <p class="muted hint">
+            Files you have scrolled through or marked viewed are remembered per pull request. On your next
+            visit, files whose changes are the same are collapsed and new or changed files get a badge.
+          </p>
+          <label><input type="checkbox" id="feature-order" /> Show a reading order</label>
+          <p class="muted hint">
+            Groups files so types and schema come first, then logic, UI, tests and config. Authors can pin
+            files by adding a "Review order" heading followed by a list of paths to the pull request
+            description.
+          </p>
+          <label><input type="checkbox" id="feature-keys" /> Keyboard shortcuts</label>
+          <p class="muted hint">
+            <kbd>]</kbd> next file to review, <kbd>[</kbd> previous, <kbd>v</kbd> mark viewed and go to next,
+            <kbd>x</kbd> collapse or expand, <kbd>h</kbd> help.
+          </p>
+        </div>
+        <details class="card">
+          <summary>Reading order tiers</summary>
+          <p class="muted">Files matching none of these are read as logic, after types and schema.</p>
+          <div id="tiers"></div>
+        </details>
+      </section>
+
+      <section>
         <h2>Categories</h2>
         <div id="categories"></div>
         <button type="button" id="add-category">Add category</button>
@@ -63,6 +90,27 @@
         </div>
         <textarea class="patterns" rows="6" spellcheck="false" aria-label="Glob patterns, one per line"></textarea>
       </fieldset>
+    </template>
+
+    <template id="structural-tpl">
+      <fieldset class="card category structural">
+        <div class="row">
+          <input class="name" aria-label="Category name" />
+          <label><input type="checkbox" class="enabled" /> enabled</label>
+          <select class="mode" aria-label="Mode">
+            <option value="collapse">collapse</option>
+            <option value="hide">hide</option>
+          </select>
+        </div>
+        <p class="muted hint help"></p>
+      </fieldset>
+    </template>
+
+    <template id="tier-tpl">
+      <label class="stack tier">
+        <span class="tier-name"></span>
+        <textarea rows="5" spellcheck="false"></textarea>
+      </label>
     </template>
 
     <template id="repo-tpl">

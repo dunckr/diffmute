@@ -12,6 +12,15 @@ A toolbar at the top of the diff shows what was muted ("Collapsed 3 lockfiles, 1
 - Folders in the file tree whose files are all muted (such as `__tests__/`) are collapsed, and reopen when any of their files is shown again. A folder you open by hand stays open.
 - A `MutationObserver` picks up lazily loaded diffs and SPA navigation.
 
+## Review flow
+
+- **Structural categories.** Deleted files, files renamed without changes, and files whose only changes are whitespace are collapsed like any other category. They are listed first in the options page, can be turned off or switched to hide, and have no patterns. Whitespace detection needs the diff to be rendered, so a large file behind "Load diff" is not classified until it loads.
+- **Reading order.** A "Reading order" outline in the bar groups files into types and schema, logic, UI, tests, and config and docs, and clicking a file jumps to it. Tier globs are editable in options. A PR author can pin files by putting a "Review order" heading (or bold line) in the description followed by a list of paths, folders or globs; those files come first. The description is fetched once per PR and cached for an hour.
+- **Changes since last visit.** A file counts as read once it has been expanded on screen for a second, or marked viewed. On a later visit to the same PR, files whose patch is the same as when you read them are collapsed as "unchanged", new and changed files get a badge in the header, outline and file tree, and a "new since last visit" chip jumps to the first one. Nothing changes on a first visit. Commit pages and commit ranges are not recorded.
+- **Keyboard.** `]` and `[` move to the next or previous file that still needs review (not muted, unchanged or viewed), in reading order. `v` marks the current file viewed and moves on, using GitHub's Viewed checkbox when signed in and a local record otherwise. `x` collapses or expands the current file, `h` shows the shortcuts.
+
+Each of the last three can be turned off in the options page.
+
 ## Rules
 
 Edit rules from the toolbar's "rules" button or the extension's options page.
@@ -24,7 +33,7 @@ Edit rules from the toolbar's "rules" button or the extension's options page.
 
 Per-repo overrides (keyed by `owner/repo`) can turn the extension off for a repo, change a category's mode or turn it off, and list "never mute" globs for paths that are product code in that repo.
 
-Config is stored in `storage.sync`, per-PR toggles in `storage.local`.
+Config is stored in `storage.sync`. Per-PR state (revealed categories, read fingerprints, local viewed marks) is stored in `storage.local` for the 300 most recent PRs.
 
 ## Development
 
@@ -33,7 +42,7 @@ TypeScript in `src/`, static files (manifest, HTML, CSS) in `static/`. esbuild b
 ```bash
 npm install
 npm start          # build, watch, and open Firefox with the extension loaded
-npm test           # glob and rule tests
+npm test           # glob, rule, detection, order and navigation tests
 npm run typecheck
 npm run lint       # build, then web-ext lint
 npm run package    # zip in web-ext-artifacts/

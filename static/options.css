@@ -151,3 +151,39 @@ footer {
   background: var(--bg);
   border-top: 1px solid var(--border);
 }
+
+.stack-list > label {
+  display: block;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 2px 0 12px 22px;
+}
+
+.hint:last-child {
+  margin-bottom: 0;
+}
+
+.structural .hint {
+  margin: 8px 0 0;
+}
+
+details.card > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tier {
+  margin-top: 12px;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  text-align: center;
+  font: 12px/18px ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
