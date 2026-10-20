@@ -1,4 +1,14 @@
-import { classify, defaultConfig, normalizeConfig, resolveRules, type Config } from "./rules.ts";
+import { TIER_NAMES } from "./order.ts";
+import {
+  STRUCTURAL_HELP,
+  TIER_IDS,
+  classify,
+  defaultConfig,
+  isStructural,
+  normalizeConfig,
+  resolveRules,
+  type Config,
+} from "./rules.ts";
 import { loadConfig, resetConfig, saveConfig } from "./storage.ts";
 
 function $<T extends Element = HTMLElement>(sel: string): T {
@@ -23,17 +33,37 @@ function renderCategories(): void {
   const root = $("#categories");
   root.replaceChildren();
   for (const c of state.categories) {
-    const node = template("#category-tpl");
+    const structural = isStructural(c.id);
+    const node = template(structural ? "#structural-tpl" : "#category-tpl");
     node.dataset.id = c.id;
     field(node, ".name").value = c.name;
     field(node, ".enabled").checked = c.enabled;
     field<HTMLSelectElement>(node, ".mode").value = c.mode;
-    field<HTMLTextAreaElement>(node, ".patterns").value = c.patterns.join("\n");
-    field(node, ".remove").addEventListener("click", () => {
-      state = collect();
-      state.categories = state.categories.filter((x) => x.id !== c.id);
-      render();
-    });
+    if (structural) {
+      field(node, ".help").textContent = STRUCTURAL_HELP[c.id] ?? "";
+    } else {
+      field<HTMLTextAreaElement>(node, ".patterns").value = c.patterns.join("\n");
+      field(node, ".remove").addEventListener("click", () => {
+        state = collect();
+        state.categories = state.categories.filter((x) => x.id !== c.id);
+        render();
+      });
+    }
+    root.append(node);
+  }
+}
+
+function renderFeatures(): void {
+  $<HTMLInputElement>("#feature-revisit").checked = state.features.revisit;
+  $<HTMLInputElement>("#feature-order").checked = state.features.order;
+  $<HTMLInputElement>("#feature-keys").checked = state.features.keys;
+  const root = $("#tiers");
+  root.replaceChildren();
+  for (const id of TIER_IDS) {
+    const node = template("#tier-tpl");
+    node.dataset.tier = id;
+    field(node, ".tier-name").textContent = TIER_NAMES[id];
+    field<HTMLTextAreaElement>(node, "textarea").value = state.tiers[id].join("\n");
     root.append(node);
   }
 }
@@ -71,6 +101,7 @@ function renderRepos(): void {
 }
 
 function render(): void {
+  renderFeatures();
   renderCategories();
   renderRepos();
   runTest();
@@ -82,7 +113,7 @@ function collect(): Config {
     name: field(node, ".name").value.trim() || node.dataset.id!,
     enabled: field(node, ".enabled").checked,
     mode: field<HTMLSelectElement>(node, ".mode").value,
-    patterns: lines(field<HTMLTextAreaElement>(node, ".patterns").value),
+    patterns: lines(node.querySelector<HTMLTextAreaElement>(".patterns")?.value ?? ""),
   }));
   const repos: Record<string, unknown> = {};
   for (const node of document.querySelectorAll<HTMLElement>(".repo")) {
@@ -98,7 +129,16 @@ function collect(): Config {
       categories: cats,
     };
   }
-  return normalizeConfig({ categories, repos });
+  const tiers: Record<string, string[]> = {};
+  for (const node of document.querySelectorAll<HTMLElement>(".tier")) {
+    tiers[node.dataset.tier!] = lines(field<HTMLTextAreaElement>(node, "textarea").value);
+  }
+  const features = {
+    revisit: $<HTMLInputElement>("#feature-revisit").checked,
+    order: $<HTMLInputElement>("#feature-order").checked,
+    keys: $<HTMLInputElement>("#feature-keys").checked,
+  };
+  return normalizeConfig({ categories, repos, features, tiers });
 }
 
 function runTest(): void {
