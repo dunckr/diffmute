@@ -48,6 +48,6 @@ Release Firefox only installs signed extensions. Signing is free and unlisted (n
 2. Put them in `.env` (git-ignored, see `.env.example`)
 3. Run `npm run install:firefox`. It signs the build and opens the `.xpi` in Firefox, which prompts to install it.
 
-Each signed upload needs a new `version` in `static/manifest.json`.
+Signed builds get a unique fourth version number automatically, so every run installs as an update.
 
 For a quick try without signing, open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and pick `dist/manifest.json` (run `npm run build` first). It stays until Firefox restarts.
