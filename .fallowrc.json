@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "entry": [
+    "src/content.ts",
+    "src/background.ts",
+    "src/options.ts",
+    "scripts/*.mjs",
+    "test/**/*.test.ts",
+    "eslint.config.js",
+    "vitest.config.ts",
+    "web-ext-config.mjs"
+  ],
+  "ignorePatterns": ["static/**"],
+  "ignoreDependencies": ["web-ext"],
+  "ignoreExports": []
+}

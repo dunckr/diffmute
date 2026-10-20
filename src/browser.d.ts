@@ -1,4 +1,4 @@
-import type { Browser } from "webextension-polyfill";
+import type { Browser } from 'webextension-polyfill';
 
 declare global {
   // Firefox exposes the promise-based WebExtension API as a global.

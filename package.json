@@ -1,24 +1,42 @@
 {
   "name": "diffmute",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Collapse or hide noisy files on GitHub pull request diffs.",
   "scripts": {
-    "test": "node --test \"test/**/*.test.ts\"",
+    "test": "vitest",
     "typecheck": "tsc",
+    "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dead-code": "fallow dead-code",
     "build": "node scripts/build.mjs",
+    "build:chrome": "node scripts/build.mjs --chrome",
     "start": "node scripts/build.mjs --run",
-    "lint": "npm run build && web-ext lint",
+    "lint:ext": "npm run build && web-ext lint",
     "package": "npm run build && web-ext build --overwrite-dest",
     "sign": "node scripts/build.mjs --stamp && node --env-file-if-exists=.env node_modules/web-ext/bin/web-ext.js sign --channel unlisted",
     "install:firefox": "npm run sign && open -a Firefox \"$(ls -t web-ext-artifacts/*.xpi | head -1)\""
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^26.6.5",
     "@types/webextension-polyfill": "^0.12.6",
     "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "eslint-plugin-unicorn": "^56.0.1",
+    "fallow": "^3.34.1",
+    "globals": "^15.15.0",
+    "prettier": "^3.9.10",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^3.2.7",
     "web-ext": "^8.3.0"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  }
 }

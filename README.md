@@ -6,11 +6,14 @@ A toolbar at the top of the diff shows what was muted ("Collapsed 3 lockfiles, 1
 
 ## How it works
 
-- Runs on `/pull/N/files`, `/pull/N/changes` and `/pull/N/commits/<sha>`. The content script is injected on all of `github.com` because GitHub navigates between PR tabs without a full page load.
+- Runs on `/pull/N/files`, `/pull/N/changes`, `/pull/N/commits/<sha>`, `/commit/<sha>` and `/compare/...`. The content script is injected on all of `github.com` because GitHub navigates between PR tabs without a full page load.
 - Each file container has `id="diff-<sha256(path)>"`, so files are keyed by that hash and the path is confirmed by hashing candidates from the header. Class names are not used.
 - Collapse clicks GitHub's own toggle button so its UI state stays consistent. Hide sets `display: none` on the file and its file tree entry.
 - Folders in the file tree whose files are all muted (such as `__tests__/`) are collapsed, and reopen when any of their files is shown again. A folder you open by hand stays open.
 - A `MutationObserver` picks up lazily loaded diffs and SPA navigation.
+- Counts in the bar include files whose diffs have not loaded yet, classified by path from the file tree.
+- A muted file you expand with GitHub's own toggle stays expanded, even after GitHub unloads and reloads it while you scroll. Muting its category again from the bar collapses it.
+- Each file header has a "mute…" button (shown on hover) that suggests patterns for that file, from its exact name to its folder, and adds the one you pick to a category. It can also add the file to the repo's never-mute list.
 
 ## Review flow
 
@@ -23,17 +26,20 @@ Each of the last three can be turned off in the options page.
 
 ## Rules
 
-Edit rules from the toolbar's "rules" button or the extension's options page.
+Edit rules from the bar's "rules" button, which opens the options page at the current repo's overrides, or from the extension's options page. Export and import save and load the whole config as JSON.
+
+`docs` and `translations` categories ship turned off. Configs saved by an earlier version keep their own categories, so use "Reset to defaults" to pick up new default patterns.
 
 - A pattern without `/` matches the file name at any depth (`yarn.lock`).
 - `**/` matches any number of folders, `*` and `?` stay within one folder.
 - A leading `/` anchors to the repo root (`/test/**`).
 - `{a,b}` and `[abc]` / `[!abc]` work.
+- A line starting with `!` takes back paths an earlier line matched, so the last matching line wins (`**/test/**` then `!**/test/helpers/**`). Lines starting with `#` are comments.
 - The first matching category wins, so put narrower categories first.
 
-Per-repo overrides (keyed by `owner/repo`) can turn the extension off for a repo, change a category's mode or turn it off, and list "never mute" globs for paths that are product code in that repo.
+A global never-mute list applies to every repo. Per-repo overrides (keyed by `owner/repo`) can turn the extension off for a repo, change a category's mode or turn it off, and list "never mute" globs for paths that are product code in that repo.
 
-Config is stored in `storage.sync`. Per-PR state (revealed categories, read fingerprints, local viewed marks) is stored in `storage.local` for the 300 most recent PRs.
+Config is stored in `storage.sync`, one key per category to stay under its 8 KB per-item limit. Per-PR state (revealed categories, read fingerprints, local viewed marks) is stored in `storage.local` for the 300 most recent PRs.
 
 ## Development
 
@@ -41,12 +47,24 @@ TypeScript in `src/`, static files (manifest, HTML, CSS) in `static/`. esbuild b
 
 ```bash
 npm install
-npm start          # build, watch, and open Firefox with the extension loaded
-npm test           # glob, rule, detection, order and navigation tests
+npm start              # build, watch, and open Firefox with the extension loaded
+npm test               # vitest
 npm run typecheck
-npm run lint       # build, then web-ext lint
-npm run package    # zip in web-ext-artifacts/
+npm run lint           # eslint
+npm run format         # prettier
+npm run dead-code      # fallow: unused files, exports and dependencies
+npm run lint:ext       # build, then web-ext lint
+npm run build:chrome   # Chrome build in dist-chrome/
+npm run package        # zip in web-ext-artifacts/
 ```
+
+CI runs formatting, lint, typecheck, tests, dead-code, web-ext lint and the Chrome build on every pull request. Node 24 (`.node-version`).
+
+The version lives only in `package.json`; the build writes it into the manifest.
+
+### Chrome
+
+`npm run build:chrome`, then open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and pick `dist-chrome/`. The same code runs in both browsers: Chrome's `chrome` API is aliased to `browser`, and the manifest gets a service worker background instead of Firefox's background script.
 
 `npm start` uses a dedicated Firefox profile in `.firefox-profile/`, so a GitHub sign-in there persists between runs. Edits to `src/` or `static/` rebuild and reload the extension automatically.
 
