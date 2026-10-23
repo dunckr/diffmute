@@ -348,8 +348,10 @@ function applyFolders(rules: Rules): void {
     if (folderWant.get(dir) === open) continue;
     const toggle = folderToggle(dir);
     if (!toggle) continue;
-    folderWant.set(dir, open);
     if (toggle.expanded !== open) toggle.el.click();
+    // GitHub's tree ignores clicks until its script loads, so only record
+    // the folder once it has actually changed; later scans retry it.
+    if (folderToggle(dir)?.expanded === open) folderWant.set(dir, open);
   }
 }
 

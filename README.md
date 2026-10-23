@@ -1,49 +1,70 @@
 # diffmute
 
-A Firefox extension that collapses or hides noisy files on GitHub pull request diffs: lockfiles, tests, snapshots, fixtures and generated code.
+A Firefox extension that collapses noisy files in GitHub pull request diffs.
 
-A toolbar at the top of the diff shows what was muted ("Collapsed 3 lockfiles, 12 tests") with a toggle per category, so nothing disappears silently. Toggles are remembered per PR.
+![diffmute on a React pull request: tests are collapsed, the "tests" chip shows them again, and the reading order lists the files](docs/demo.gif)
 
-## How it works
+Lockfiles, tests, snapshots, generated code, deleted files, renames without changes and whitespace-only changes are collapsed as the diff loads. A bar at the top of the diff lists what was collapsed ("Collapsed 8 tests"), with a chip for each category. Click a chip to show that category again. The choice is saved for each PR.
 
-- Runs on `/pull/N/files`, `/pull/N/changes`, `/pull/N/commits/<sha>`, `/commit/<sha>` and `/compare/...`. The content script is injected on all of `github.com` because GitHub navigates between PR tabs without a full page load.
-- Each file container has `id="diff-<sha256(path)>"`, so files are keyed by that hash and the path is confirmed by hashing candidates from the header. Class names are not used.
-- Collapse clicks GitHub's own toggle button so its UI state stays consistent. Hide sets `display: none` on the file and its file tree entry.
-- Folders in the file tree whose files are all muted (such as `__tests__/`) are collapsed, and reopen when any of their files is shown again. A folder you open by hand stays open.
-- A `MutationObserver` picks up lazily loaded diffs and SPA navigation.
-- Counts in the bar include files whose diffs have not loaded yet, classified by path from the file tree.
-- A muted file you expand with GitHub's own toggle stays expanded, even after GitHub unloads and reloads it while you scroll. Muting its category again from the bar collapses it.
-- Each file header has a "mute…" button (shown on hover) that suggests patterns for that file, from its exact name to its folder, and adds the one you pick to a category. It can also add the file to the repo's never-mute list.
+## Features
 
-## Review flow
+- **Muted categories.** Files are sorted into categories by path (lockfiles, snapshots, tests, generated) or by what changed (deleted, renamed without changes, whitespace only). Each category can collapse its files, hide them, or be turned off.
+- **File tree folders.** Folders in the sidebar whose files are all muted, like `__tests__/`, are closed. They open again when you show their files.
+- **Mute from the diff.** Hover a file header and click "mute…" to add that file, its extension or its folder to a category, or to add it to the repo's never-mute list.
+- **Reading order.** The "Reading order" outline in the bar groups files into types and schema, logic, UI, tests, and config and docs. Click a file to jump to it. A PR author can pin files to the top by adding a "Review order" heading to the description, followed by a list of paths, folders or globs.
+- **Changes since last visit.** A file counts as read once it has been open on screen for a second, or marked viewed. When you come back to a PR, files that haven't changed since you read them are collapsed as "unchanged". New and changed files get a badge, and a "new since last visit" chip jumps to the first one.
+- **Keyboard.** `]` and `[` go to the next or previous file that still needs review. `v` marks the current file viewed and moves on. `x` collapses or expands the current file. `h` shows the shortcuts.
 
-- **Structural categories.** Deleted files, files renamed without changes, and files whose only changes are whitespace are collapsed like any other category. They are listed first in the options page, can be turned off or switched to hide, and have no patterns. Whitespace detection needs the diff to be rendered, so a large file behind "Load diff" is not classified until it loads.
-- **Reading order.** A "Reading order" outline in the bar groups files into types and schema, logic, UI, tests, and config and docs, and clicking a file jumps to it. Tier globs are editable in options. A PR author can pin files by putting a "Review order" heading (or bold line) in the description followed by a list of paths, folders or globs; those files come first. The description is fetched once per PR and cached for an hour.
-- **Changes since last visit.** A file counts as read once it has been expanded on screen for a second, or marked viewed. On a later visit to the same PR, files whose patch is the same as when you read them are collapsed as "unchanged", new and changed files get a badge in the header, outline and file tree, and a "new since last visit" chip jumps to the first one. Nothing changes on a first visit. Commit pages and commit ranges are not recorded.
-- **Keyboard.** `]` and `[` move to the next or previous file that still needs review (not muted, unchanged or viewed), in reading order. `v` marks the current file viewed and moves on, using GitHub's Viewed checkbox when signed in and a local record otherwise. `x` collapses or expands the current file, `h` shows the shortcuts.
+You can turn off reading order, changes since last visit and keyboard shortcuts in the options page.
 
-Each of the last three can be turned off in the options page.
+## Install
+
+Release Firefox only installs signed extensions. Signing is free and unlisted, so the extension isn't published on addons.mozilla.org:
+
+1. Create API credentials at https://addons.mozilla.org/developers/addon/api/key/
+2. Copy `.env.example` to `.env` and fill them in.
+3. Run `npm install`, then `npm run install:firefox`. It signs the build and opens the `.xpi` in Firefox, which asks you to install it.
+
+Each signed build gets a new fourth version number, so Firefox installs every run as an update.
+
+To try it without signing, run `npm run build`, open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and pick `dist/manifest.json`. It stays loaded until Firefox restarts.
+
+### Chrome
+
+Run `npm run build:chrome`, open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and pick `dist-chrome/`.
 
 ## Rules
 
-Edit rules from the bar's "rules" button, which opens the options page at the current repo's overrides, or from the extension's options page. Export and import save and load the whole config as JSON.
+Click "rules" in the bar to open the options page at the current repo's settings. You can export and import the whole config as JSON.
 
-`docs` and `translations` categories ship turned off. Configs saved by an earlier version keep their own categories, so use "Reset to defaults" to pick up new default patterns.
+Each category is a list of patterns:
 
-- A pattern without `/` matches the file name at any depth (`yarn.lock`).
-- `**/` matches any number of folders, `*` and `?` stay within one folder.
-- A leading `/` anchors to the repo root (`/test/**`).
-- `{a,b}` and `[abc]` / `[!abc]` work.
-- A line starting with `!` takes back paths an earlier line matched, so the last matching line wins (`**/test/**` then `!**/test/helpers/**`). Lines starting with `#` are comments.
-- The first matching category wins, so put narrower categories first.
+- A pattern without `/` matches the file name in any folder (`yarn.lock`).
+- `**/` matches any number of folders. `*` and `?` match within one folder.
+- A leading `/` anchors the pattern to the repo root (`/test/**`).
+- `{a,b}`, `[abc]` and `[!abc]` work.
+- A line starting with `!` excludes paths that an earlier line matched, so the last matching line wins (`**/test/**`, then `!**/test/helpers/**`). Lines starting with `#` are comments.
+- A file goes into the first category that matches it, so put narrower categories first.
 
-A global never-mute list applies to every repo. Per-repo overrides (keyed by `owner/repo`) can turn the extension off for a repo, change a category's mode or turn it off, and list "never mute" globs for paths that are product code in that repo.
+The `docs` and `translations` categories are off by default. If you saved a config with an older version, click "Reset to defaults" to get new default patterns.
 
-Config is stored in `storage.sync`, one key per category to stay under its 8 KB per-item limit. Per-PR state (revealed categories, read fingerprints, local viewed marks) is stored in `storage.local` for the 300 most recent PRs.
+A global never-mute list applies to every repo. Each repo (`owner/repo`) can also have its own settings: turn the extension off, change a category's mode or turn it off, or list paths that should never be muted.
+
+## How it works
+
+- It runs on PR files and commits pages, single commits and compare views. The content script is loaded on all of `github.com` because GitHub switches between PR tabs without a full page load.
+- GitHub gives each file in the diff the id `diff-<sha256(path)>`, so files are tracked by that hash. Class names aren't used.
+- To collapse a file, it clicks GitHub's own toggle, so GitHub knows the file is collapsed. Hiding sets `display: none` on the file and its file tree entry.
+- A `MutationObserver` handles diffs that load late and navigation between pages.
+- The bar's counts include files whose diffs haven't loaded yet, matched by path from the file tree.
+- If you expand a muted file with GitHub's toggle, it stays expanded, even when GitHub unloads and reloads it as you scroll.
+- Whitespace-only changes can only be detected once a diff loads, so a large file behind "Load diff" isn't sorted until you load it.
+
+Config is saved in `storage.sync`, with one key per category to stay under the 8 KB limit for each item. Per-PR state (shown categories, read files, local viewed marks) is saved in `storage.local` for the 300 most recent PRs.
 
 ## Development
 
-TypeScript in `src/`, static files (manifest, HTML, CSS) in `static/`. esbuild bundles both into `dist/`, which is what Firefox loads.
+The TypeScript source is in `src/`, and the manifest, HTML and CSS are in `static/`. esbuild bundles both into `dist/`, which is what Firefox loads.
 
 ```bash
 npm install
@@ -58,24 +79,8 @@ npm run build:chrome   # Chrome build in dist-chrome/
 npm run package        # zip in web-ext-artifacts/
 ```
 
-CI runs formatting, lint, typecheck, tests, dead-code, web-ext lint and the Chrome build on every pull request. Node 24 (`.node-version`).
+`npm start` uses its own Firefox profile in `.firefox-profile/`, so you stay signed in to GitHub between runs. Changes to `src/` or `static/` rebuild and reload the extension.
 
-The version lives only in `package.json`; the build writes it into the manifest.
+Firefox and Chrome run the same code. In Chrome, the `chrome` API is used as `browser`, and the manifest uses a service worker instead of a background script.
 
-### Chrome
-
-`npm run build:chrome`, then open `chrome://extensions`, turn on Developer mode, click "Load unpacked" and pick `dist-chrome/`. The same code runs in both browsers: Chrome's `chrome` API is aliased to `browser`, and the manifest gets a service worker background instead of Firefox's background script.
-
-`npm start` uses a dedicated Firefox profile in `.firefox-profile/`, so a GitHub sign-in there persists between runs. Edits to `src/` or `static/` rebuild and reload the extension automatically.
-
-## Installing in your everyday Firefox
-
-Release Firefox only installs signed extensions. Signing is free and unlisted (not published on addons.mozilla.org):
-
-1. Create API credentials at https://addons.mozilla.org/developers/addon/api/key/
-2. Put them in `.env` (git-ignored, see `.env.example`)
-3. Run `npm run install:firefox`. It signs the build and opens the `.xpi` in Firefox, which prompts to install it.
-
-Signed builds get a unique fourth version number automatically, so every run installs as an update.
-
-For a quick try without signing, open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and pick `dist/manifest.json` (run `npm run build` first). It stays until Firefox restarts.
+CI checks formatting, lint, types, tests, dead code, web-ext lint and the Chrome build on pushes to main and on pull requests. It uses Node 24 (`.node-version`). The version number is only in `package.json`, and the build copies it into the manifest.
