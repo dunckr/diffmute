@@ -305,9 +305,13 @@ function undo(element: HTMLElement): void {
 const TREE_ITEM = '[role="treeitem"]';
 const TREE_GROUP = '[role="group"]';
 
-// Collapses sidebar folders whose files are all muted (e.g. __tests__/),
-// and reopens them once any of their files is shown again. Folders the
-// user reopens by hand are left alone.
+// Last open state applied to each sidebar folder.
+const folderWant = new WeakMap<Element, boolean>();
+
+// Sidebar folders are closed when every file in them is muted and open
+// otherwise. A folder is only set when that answer changes (or it first
+// appears), so folders the user toggles by hand stay put until the next
+// show/hide changes them.
 function applyFolders(rules: Rules): void {
   // One pass over the files, adding each to every folder above it.
   const tally = new Map<Element, { files: number; muted: number }>();
@@ -326,29 +330,14 @@ function applyFolders(rules: Rules): void {
       tally.set(dir, t);
     }
   }
-  const allMuted = (dir: Element) => {
-    const t = tally.get(dir);
-    return !!t && t.files > 0 && t.files === t.muted;
-  };
 
-  for (const dir of tally.keys() as IterableIterator<HTMLElement>) {
-    const parent = dir.parentElement?.closest(TREE_ITEM);
-    const want = allMuted(dir) && !(parent && allMuted(parent));
+  for (const [dir, t] of tally) {
+    const open = t.files === 0 || t.files !== t.muted;
+    if (folderWant.get(dir) === open) continue;
     const toggle = folderToggle(dir);
     if (!toggle) continue;
-    if (want && !dir.dataset.diffmuteFolder) {
-      dir.dataset.diffmuteFolder = '1';
-      if (toggle.expanded) toggle.el.click();
-      else dir.dataset.diffmuteFolder = 'already';
-    } else if (!want && dir.dataset.diffmuteFolder) {
-      if (
-        dir.dataset.diffmuteFolder === '1' &&
-        !toggle.expanded &&
-        !(parent && allMuted(parent))
-      )
-        toggle.el.click();
-      delete dir.dataset.diffmuteFolder;
-    }
+    folderWant.set(dir, open);
+    if (toggle.expanded !== open) toggle.el.click();
   }
 }
 
