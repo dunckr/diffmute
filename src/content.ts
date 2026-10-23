@@ -307,6 +307,9 @@ const TREE_GROUP = '[role="group"]';
 
 // Last open state applied to each sidebar folder.
 const folderWant = new WeakMap<Element, boolean>();
+// Files seen inside each folder, by folder id. The React tree drops a
+// closed folder's children, so this is how we know what it holds.
+const folderFiles = new Map<string, Set<string>>();
 
 // Sidebar folders are closed when every file in them is muted and open
 // otherwise. A folder is only set when that answer changes (or it first
@@ -314,25 +317,34 @@ const folderWant = new WeakMap<Element, boolean>();
 // show/hide changes them.
 function applyFolders(rules: Rules): void {
   // One pass over the files, adding each to every folder above it.
-  const tally = new Map<Element, { files: number; muted: number }>();
+  const contents = new Map<Element, Set<string>>();
   for (const node of treeLeaves()) {
     const path = treeLeafPath(node);
-    const hash = treeLeafHash(node) ?? (path ? hashCache.get(path) : undefined);
-    const muted = !!path && isMuted(hash ?? '', path, rules);
+    if (!path) continue;
+    const hash = treeLeafHash(node);
+    if (hash) hashCache.set(path, hash);
     for (
       let dir = node.parentElement?.closest(TREE_ITEM);
       dir;
       dir = dir.parentElement?.closest(TREE_ITEM)
     ) {
-      const t = tally.get(dir) ?? { files: 0, muted: 0 };
-      t.files++;
-      if (muted) t.muted++;
-      tally.set(dir, t);
+      const set = contents.get(dir) ?? new Set();
+      set.add(path);
+      contents.set(dir, set);
+      if (!dir.id) continue;
+      const known = folderFiles.get(dir.id) ?? new Set();
+      known.add(path);
+      folderFiles.set(dir.id, known);
     }
   }
 
-  for (const [dir, t] of tally) {
-    const open = t.files === 0 || t.files !== t.muted;
+  for (const dir of document.querySelectorAll<HTMLElement>(TREE_ITEM)) {
+    if (!isFolder(dir)) continue;
+    const paths = (dir.id && folderFiles.get(dir.id)) || contents.get(dir);
+    if (!paths?.size) continue;
+    const open = [...paths].some(
+      (path) => !isMuted(hashCache.get(path) ?? '', path, rules)
+    );
     if (folderWant.get(dir) === open) continue;
     const toggle = folderToggle(dir);
     if (!toggle) continue;
@@ -405,6 +417,14 @@ function folderToggle(
   return null;
 }
 
+function isFolder(node: HTMLElement): boolean {
+  return (
+    !!node.querySelector(TREE_GROUP) ||
+    node.hasAttribute('aria-expanded') ||
+    node.dataset.treeEntryType === 'directory'
+  );
+}
+
 function isMuted(hash: string, path: string, rules: Rules): boolean {
   const id = categoryOf(hash, path, rules);
   return !!id && !shown.has(id);
@@ -466,8 +486,8 @@ function treeLeafPath(node: Element): null | string {
 }
 
 function treeLeaves(): Element[] {
-  return [...document.querySelectorAll(TREE_ITEM)].filter(
-    (n) => !n.querySelector(TREE_GROUP)
+  return [...document.querySelectorAll<HTMLElement>(TREE_ITEM)].filter(
+    (n) => !isFolder(n)
   );
 }
 
@@ -1095,6 +1115,7 @@ async function enterPr(p: Page): Promise<void> {
   read = { ...state.read };
   viewedLocal = new Set(state.viewed);
   userExpanded.clear();
+  folderFiles.clear();
   tags.clear();
   factsCache.clear();
   fingerprints.clear();
