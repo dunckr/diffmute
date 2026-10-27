@@ -182,8 +182,6 @@ function detectFacts(element: HTMLElement, counts: Counts | null): FileFacts {
   return { deleted, renamed, whitespace };
 }
 
-// ---- structural facts and fingerprints ----
-
 // The file container a node sits in. The React view nests other "diff-"
 // ids inside a file, so walk up to the one that holds the path hash.
 function fileOf(node: Element | null): HTMLElement | null {
@@ -196,6 +194,8 @@ function fileOf(node: Element | null): HTMLElement | null {
   }
   return null;
 }
+
+// ---- structural facts and fingerprints ----
 
 async function fileState(
   element: HTMLElement,
@@ -254,6 +254,20 @@ function labelOf(button: Element): string {
     .map((s) => clean(s))
     .filter(Boolean)
     .join(' ');
+}
+
+// GitHub leaves large diffs behind a "Load diff" button. Press it once for
+// files we show, so muted ones stay cheap until the user opens them.
+function loadLargeDiff(element: HTMLElement): void {
+  if (element.dataset.diffmute || element.dataset.diffmuteLoaded) return;
+  if (!/Large diffs are not rendered by default/i.test(bodyText(element)))
+    return;
+  const button = [...element.querySelectorAll('button')].find(
+    (b) => clean(b.textContent) === 'Load diff' || labelOf(b) === 'Load diff'
+  );
+  if (!button) return;
+  element.dataset.diffmuteLoaded = '1';
+  button.click();
 }
 
 function markChevron(element: Element): void {
@@ -1348,6 +1362,7 @@ async function scan(): Promise<void> {
       );
       seen.set(hash, cat?.id ?? null);
       applyFile(element, hash, cat);
+      loadLargeDiff(element);
       applyBadge(element, revisit ? (tag ?? undefined) : undefined);
       applyMuteButton(element, hash);
       if (!observed.has(element)) {

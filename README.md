@@ -58,7 +58,8 @@ A global never-mute list applies to every repo. Each repo (`owner/repo`) can als
 - A `MutationObserver` handles diffs that load late and navigation between pages.
 - The bar's counts include files whose diffs haven't loaded yet, matched by path from the file tree.
 - If you expand a muted file with its chevron, it stays expanded, even when GitHub unloads and reloads it as you scroll.
-- Whitespace-only changes can only be detected once a diff loads, so a large file behind "Load diff" isn't sorted until you load it.
+- Large diffs that GitHub doesn't render by default are loaded automatically, unless the file is muted. A muted large file loads when you expand it.
+- Whitespace-only changes can only be detected once a diff loads, so a muted large file isn't checked until you expand it.
 
 Config is saved in `storage.sync`, with one key per category to stay under the 8 KB limit for each item. Per-PR state (shown categories, read files, local viewed marks) is saved in `storage.local` for the 300 most recent PRs.
 
