@@ -86,7 +86,13 @@ function applyFile(
   const want: Applied =
     cat && !shown.has(cat.id) && !userExpanded.has(hash) ? cat.mode : 'none';
   const have = (element.dataset.diffmute as Applied | undefined) ?? 'none';
-  if (want === have) return;
+  if (want === have) {
+    // Retry GitHub's toggle on files our class still hides; it ignores
+    // clicks until its script loads.
+    if (want === 'collapse' && element.classList.contains('diffmute-collapsed'))
+      setCollapsed(element, true);
+    return;
+  }
   undo(element);
   if (want === 'collapse') {
     if (setCollapsed(element, true)) element.dataset.diffmuteClicked = '1';
@@ -116,6 +122,15 @@ function changedLines(element: Element): {
     );
   }
   return { added, removed };
+}
+
+// GitHub's chevron: the first button in the file header that is not ours.
+function chevronOf(element: Element): HTMLButtonElement | null {
+  return (
+    [...headerOf(element).querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => !isOwnNode(b)
+    ) ?? null
+  );
 }
 
 function clean(s: null | string | undefined): string {
@@ -241,6 +256,11 @@ function labelOf(button: Element): string {
     .join(' ');
 }
 
+function markChevron(element: Element): void {
+  const chevron = chevronOf(element);
+  if (chevron) chevron.dataset.diffmuteChevron = '';
+}
+
 function pathCandidates(element: HTMLElement): string[] {
   const raw: (null | string | undefined)[] = [
     element.dataset.tagsearchPath,
@@ -283,18 +303,45 @@ async function resolvePath(
   return fallback || null;
 }
 
-// Returns true if the file's collapsed state was changed.
-function setCollapsed(element: HTMLElement, want: boolean): boolean {
-  const button = toggleButton(element);
-  if (!button) {
-    const had = element.classList.contains('diffmute-collapsed');
-    element.classList.toggle('diffmute-collapsed', want);
-    return had !== want;
-  }
-  const expanded = button.getAttribute('aria-expanded') === 'true';
-  if (expanded !== want) return false;
-  button.click();
+// A file collapsed by our class fallback still shows GitHub's chevron as
+// open. Clicking that chevron or the toggle reveals the file. Returns true
+// if it did.
+function revealFallback(element: HTMLElement, button: Element): boolean {
+  if (
+    !element.classList.contains('diffmute-collapsed') ||
+    !element.dataset.diffmute
+  )
+    return false;
+  if (button !== chevronOf(element) && button !== toggleButton(element))
+    return false;
+  userExpanded.add(element.id.slice(5));
+  delete element.dataset.diffmute;
+  delete element.dataset.diffmuteClicked;
+  element.classList.remove('diffmute-collapsed');
+  barSignature = '';
+  queueScan();
   return true;
+}
+
+// Collapses or expands a file through GitHub's toggle, so its chevron
+// matches. If there is no toggle, or GitHub ignores the click because its
+// script has not loaded, a class hides the body instead and the chevron is
+// marked so CSS can turn it. Returns true if the file's state was changed.
+function setCollapsed(element: HTMLElement, want: boolean): boolean {
+  let changed = false;
+  const button = toggleButton(element);
+  if (button && (button.getAttribute('aria-expanded') === 'true') === want) {
+    button.click();
+    changed = true;
+  }
+  const open = toggleButton(element)?.getAttribute('aria-expanded') !== 'false';
+  const fallback = want && open;
+  if (element.classList.contains('diffmute-collapsed') !== fallback) {
+    element.classList.toggle('diffmute-collapsed', fallback);
+    changed = true;
+  }
+  if (fallback) markChevron(element);
+  return changed;
 }
 
 async function sha256(s: string): Promise<string> {
@@ -307,17 +354,21 @@ async function sha256(s: string): Promise<string> {
     .join('');
 }
 
+// GitHub's collapse toggle, found by its label. The React view's chevron
+// takes its label from a tooltip that may not be rendered yet, so fall
+// back to the chevron when it reports an expanded state.
 function toggleButton(element: Element): HTMLButtonElement | null {
   const buttons = element.querySelectorAll<HTMLButtonElement>(
     'button[aria-expanded]'
   );
-  return (
-    [...buttons].find((b) =>
-      /toggle diff|collapse file|expand file|^(collapse|expand)\b/i.test(
-        labelOf(b)
-      )
-    ) ?? null
+  const labelled = [...buttons].find((b) =>
+    /toggle diff|collapse file|expand file|^(collapse|expand)\b/i.test(
+      labelOf(b)
+    )
   );
+  if (labelled) return labelled;
+  const chevron = chevronOf(element);
+  return chevron?.hasAttribute('aria-expanded') ? chevron : null;
 }
 
 function undo(element: HTMLElement): void {
@@ -1458,27 +1509,27 @@ document.addEventListener(
   (event) => {
     if (!event.isTrusted) return;
     const button = (event.target as Element).closest?.<HTMLButtonElement>(
-      'button[aria-expanded]'
+      'button'
     );
     const element = fileOf(button ?? null);
-    if (!button || !element || toggleButton(element) !== button) return;
+    if (!button || !element) return;
+    if (revealFallback(element, button)) {
+      // Unless GitHub has the file closed too, it already shows it as open,
+      // so keep the click from closing it.
+      if (button.getAttribute('aria-expanded') !== 'false') {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      return;
+    }
+    if (!button.hasAttribute('aria-expanded')) return;
+    if (toggleButton(element) !== button) return;
     const hash = element.id.slice(5);
-    const opening =
-      button.getAttribute('aria-expanded') !== 'true' ||
-      element.classList.contains('diffmute-collapsed');
+    const opening = button.getAttribute('aria-expanded') !== 'true';
     if (opening && element.dataset.diffmute) {
       userExpanded.add(hash);
       delete element.dataset.diffmute;
       delete element.dataset.diffmuteClicked;
-      // Our fallback collapse hides the body with a class, so GitHub's
-      // toggle alone would not show it.
-      if (element.classList.contains('diffmute-collapsed')) {
-        element.classList.remove('diffmute-collapsed');
-        if (button.getAttribute('aria-expanded') === 'true')
-          event.stopPropagation();
-      }
-      barSignature = '';
-      queueScan();
     } else if (!opening && userExpanded.delete(hash)) {
       barSignature = '';
       queueScan();

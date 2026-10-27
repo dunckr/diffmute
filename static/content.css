@@ -8,6 +8,11 @@
   display: none !important;
 }
 
+/* GitHub still thinks the file is open, so turn its chevron to closed. */
+.diffmute-collapsed [data-diffmute-chevron] svg {
+  transform: rotate(-90deg);
+}
+
 .diffmute-bar {
   display: flex;
   flex-wrap: wrap;
