@@ -169,6 +169,19 @@ function detectFacts(element: HTMLElement, counts: Counts | null): FileFacts {
 
 // ---- structural facts and fingerprints ----
 
+// The file container a node sits in. The React view nests other "diff-"
+// ids inside a file, so walk up to the one that holds the path hash.
+function fileOf(node: Element | null): HTMLElement | null {
+  for (
+    let element = node?.closest<HTMLElement>('[id^="diff-"]');
+    element;
+    element = element.parentElement?.closest<HTMLElement>('[id^="diff-"]')
+  ) {
+    if (FILE_ID.test(element.id)) return element;
+  }
+  return null;
+}
+
 async function fileState(
   element: HTMLElement,
   hash: string
@@ -210,6 +223,22 @@ function isExpanded(element: HTMLElement): boolean {
     return false;
   const button = toggleButton(element);
   return button ? button.getAttribute('aria-expanded') === 'true' : true;
+}
+
+// Accessible name of a button. The React view's icon buttons take theirs
+// from a tooltip via aria-labelledby rather than aria-label.
+function labelOf(button: Element): string {
+  const ids = button.getAttribute('aria-labelledby')?.split(/\s+/) ?? [];
+  return [
+    button.getAttribute('aria-label'),
+    ...ids.map(
+      (id) => document.querySelector(`#${CSS.escape(id)}`)?.textContent
+    ),
+    button.getAttribute('title'),
+  ]
+    .map((s) => clean(s))
+    .filter(Boolean)
+    .join(' ');
 }
 
 function pathCandidates(element: HTMLElement): string[] {
@@ -285,7 +314,7 @@ function toggleButton(element: Element): HTMLButtonElement | null {
   return (
     [...buttons].find((b) =>
       /toggle diff|collapse file|expand file|^(collapse|expand)\b/i.test(
-        b.getAttribute('aria-label') ?? ''
+        labelOf(b)
       )
     ) ?? null
   );
@@ -1416,8 +1445,8 @@ document.addEventListener(
       !input.checked
     )
       return;
-    const element = input.closest<HTMLElement>('[id^="diff-"]');
-    if (element && FILE_ID.test(element.id)) markRead(element.id.slice(5));
+    const element = fileOf(input);
+    if (element) markRead(element.id.slice(5));
   },
   true
 );
@@ -1431,20 +1460,25 @@ document.addEventListener(
     const button = (event.target as Element).closest?.<HTMLButtonElement>(
       'button[aria-expanded]'
     );
-    const element = button?.closest<HTMLElement>('[id^="diff-"]');
-    if (
-      !button ||
-      !element ||
-      !FILE_ID.test(element.id) ||
-      toggleButton(element) !== button
-    )
-      return;
+    const element = fileOf(button ?? null);
+    if (!button || !element || toggleButton(element) !== button) return;
     const hash = element.id.slice(5);
-    const opening = button.getAttribute('aria-expanded') !== 'true';
+    const opening =
+      button.getAttribute('aria-expanded') !== 'true' ||
+      element.classList.contains('diffmute-collapsed');
     if (opening && element.dataset.diffmute) {
       userExpanded.add(hash);
       delete element.dataset.diffmute;
       delete element.dataset.diffmuteClicked;
+      // Our fallback collapse hides the body with a class, so GitHub's
+      // toggle alone would not show it.
+      if (element.classList.contains('diffmute-collapsed')) {
+        element.classList.remove('diffmute-collapsed');
+        if (button.getAttribute('aria-expanded') === 'true')
+          event.stopPropagation();
+      }
+      barSignature = '';
+      queueScan();
     } else if (!opening && userExpanded.delete(hash)) {
       barSignature = '';
       queueScan();
