@@ -2,7 +2,7 @@
 
 A Firefox extension that collapses noisy files in GitHub pull request diffs.
 
-![diffmute on a React pull request: tests are collapsed, the "tests" chip shows them again, and the reading order lists the files](docs/demo.gif)
+![diffmute on a React pull request: the three test files at the top of the diff load collapsed and their sidebar folder is closed. One test is opened and closed with its chevron, the "tests" chip shows all of them and hides them again, and the reading order lists the files](docs/demo.gif)
 
 Lockfiles, tests, snapshots, generated code, deleted files, renames without changes and whitespace-only changes are collapsed as the diff loads. A bar at the top of the diff lists what was collapsed ("Collapsed 8 tests"), with a chip for each category. Click a chip to show that category again. The choice is saved for each PR.
 
@@ -54,10 +54,10 @@ A global never-mute list applies to every repo. Each repo (`owner/repo`) can als
 
 - It runs on PR files and commits pages, single commits and compare views. The content script is loaded on all of `github.com` because GitHub switches between PR tabs without a full page load.
 - GitHub gives each file in the diff the id `diff-<sha256(path)>`, so files are tracked by that hash. Class names aren't used.
-- To collapse a file, it clicks GitHub's own toggle, so GitHub knows the file is collapsed. Hiding sets `display: none` on the file and its file tree entry.
+- To collapse a file, it clicks GitHub's own toggle, so GitHub knows the file is collapsed and its chevron shows it closed. If GitHub hasn't loaded its script yet, the file is hidden with a class and its chevron turned, and the toggle is clicked again on the next change to the page. Hiding sets `display: none` on the file and its file tree entry.
 - A `MutationObserver` handles diffs that load late and navigation between pages.
 - The bar's counts include files whose diffs haven't loaded yet, matched by path from the file tree.
-- If you expand a muted file with GitHub's toggle, it stays expanded, even when GitHub unloads and reloads it as you scroll.
+- If you expand a muted file with its chevron, it stays expanded, even when GitHub unloads and reloads it as you scroll.
 - Whitespace-only changes can only be detected once a diff loads, so a large file behind "Load diff" isn't sorted until you load it.
 
 Config is saved in `storage.sync`, with one key per category to stay under the 8 KB limit for each item. Per-PR state (shown categories, read files, local viewed marks) is saved in `storage.local` for the 300 most recent PRs.
