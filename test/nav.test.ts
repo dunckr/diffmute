@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { nextFile } from '../src/nav.ts';
+import { lineAnchor, nextFile } from '../src/nav.ts';
 
 test('nextFile skips files that need no attention', () => {
   const done = [false, true, true, false, false];
@@ -17,4 +17,19 @@ test('nextFile skips files that need no attention', () => {
     -1,
     'everything done'
   );
+});
+
+test('lineAnchor reads file and line from a diff link', () => {
+  const sha = 'a'.repeat(64);
+  assert.deepEqual(lineAnchor(`#diff-${sha}R12`), {
+    file: sha,
+    line: `diff-${sha}R12`,
+  });
+  assert.deepEqual(lineAnchor(`#diff-${sha}L3-L9`), {
+    file: sha,
+    line: `diff-${sha}L3`,
+  });
+  assert.equal(lineAnchor(`#diff-${sha}`), null, 'file only');
+  assert.equal(lineAnchor('#discussion_r1'), null);
+  assert.equal(lineAnchor(''), null);
 });

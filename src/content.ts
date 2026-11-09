@@ -1,5 +1,5 @@
 import { type Counts, parseCounts, whitespaceOnly } from './detect.ts';
-import { nextFile } from './nav.ts';
+import { lineAnchor, nextFile } from './nav.ts';
 import {
   isReviewOrderHeading,
   type OrderedFile,
@@ -76,6 +76,10 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let highlightTimer: ReturnType<typeof setTimeout> | undefined;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 let scanning = false;
+// A "#diff-<sha>R12" link being followed: its file is shown even if muted,
+// and the line is scrolled to once GitHub renders it.
+let anchor: null | { file: string; line: string; until: number } = null;
+let anchorSeen = '';
 let rescan = false;
 
 function applyFile(
@@ -1119,6 +1123,16 @@ function fileElement(hash: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`#diff-${hash}`);
 }
 
+// Picks up a new line link from the URL. Its file counts as opened by
+// hand, so it stays shown however the rules would mute it.
+function followAnchor(): void {
+  if (location.hash === anchorSeen) return;
+  anchorSeen = location.hash;
+  const target = lineAnchor(location.hash);
+  anchor = target && { ...target, until: Date.now() + 15_000 };
+  if (target) userExpanded.add(target.file);
+}
+
 function highlight(element: HTMLElement): void {
   for (const n of document.querySelectorAll('.diffmute-current'))
     n.classList.remove('diffmute-current');
@@ -1163,6 +1177,31 @@ function needsAttention(hash: string): boolean {
       return false;
   }
   return !isViewed(element, hash);
+}
+
+// Opens the linked file and scrolls its line into view once it renders.
+// Gives up after a while, or as soon as the user scrolls by hand.
+function scrollToAnchor(): void {
+  if (!anchor) return;
+  if (Date.now() > anchor.until) {
+    anchor = null;
+    return;
+  }
+  const element = fileElement(anchor.file);
+  if (!element) return;
+  if (!isExpanded(element)) {
+    element.classList.remove('diffmute-collapsed', 'diffmute-hidden');
+    setCollapsed(element, false);
+  }
+  const row = document.querySelector(
+    `#${anchor.line}, [data-line-anchor="${anchor.line}"]`
+  );
+  if (!row) return;
+  anchor = null;
+  row.scrollIntoView({
+    behavior: 'instant' as ScrollBehavior,
+    block: 'center',
+  });
 }
 
 function step(dir: -1 | 1, from = currentHash()): void {
@@ -1337,6 +1376,7 @@ async function scan(): Promise<void> {
       barSignature = '';
     }
     page = p;
+    followAnchor();
 
     const rules = resolveRules(config, p.repo);
     classCache = new Map();
@@ -1382,6 +1422,7 @@ async function scan(): Promise<void> {
         : []
     );
     applyFolders(rules);
+    scrollToAnchor();
     if (fileEls.length === 0) return;
 
     files = await collectFiles(fileEls);
@@ -1471,7 +1512,7 @@ new MutationObserver((mutations) => {
   if (!ownOnly) queueScan();
 }).observe(document.documentElement, { childList: true, subtree: true });
 
-for (const event_ of ['turbo:load', 'popstate', 'pageshow']) {
+for (const event_ of ['turbo:load', 'popstate', 'pageshow', 'hashchange']) {
   globalThis.addEventListener(event_, () => queueScan(0));
   document.addEventListener(event_, () => queueScan(0));
 }
@@ -1488,6 +1529,7 @@ const SCROLL_KEYS = new Set([
 ]);
 const forgetJump = () => {
   lastJump = null;
+  anchor = null;
 };
 window.addEventListener('wheel', forgetJump, { passive: true });
 globalThis.addEventListener('touchmove', forgetJump, { passive: true });
