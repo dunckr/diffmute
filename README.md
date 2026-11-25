@@ -27,6 +27,8 @@ Release Firefox only installs signed extensions. Signing is free and unlisted, s
 
 Each signed build gets a new fourth version number, so Firefox installs every run as an update.
 
+To put the newest signed build in every Firefox profile, quit Firefox and run `npm run install:profiles`. It copies the `.xpi` into each profile listed in `profiles.ini`, and each profile loads it on its next start.
+
 To try it without signing, run `npm run build`, open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on" and pick `dist/manifest.json`. It stays loaded until Firefox restarts.
 
 ### Chrome

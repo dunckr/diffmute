@@ -16,7 +16,8 @@
     "lint:ext": "npm run build && web-ext lint",
     "package": "npm run build && web-ext build --overwrite-dest",
     "sign": "node scripts/build.mjs --stamp && node --env-file-if-exists=.env node_modules/web-ext/bin/web-ext.js sign --channel unlisted",
-    "install:firefox": "npm run sign && open -a Firefox \"$(ls -t web-ext-artifacts/*.xpi | head -1)\""
+    "install:firefox": "npm run sign && open -a Firefox \"$(ls -t web-ext-artifacts/*.xpi | head -1)\"",
+    "install:profiles": "node scripts/install-profiles.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
