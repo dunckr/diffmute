@@ -29,7 +29,7 @@ export interface Features {
   order: boolean;
   // Collapse files whose patch is unchanged since you last read them.
   revisit: boolean;
-  // Open markdown files in GitHub's rich diff.
+  // Open new markdown files in GitHub's rich diff.
   rich: boolean;
 }
 

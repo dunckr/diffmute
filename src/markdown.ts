@@ -126,6 +126,13 @@ export function clearMarkdown(): void {
   }
 }
 
+// Whether a file is new in this PR or had lines before it, or null while
+// its diff rows haven't loaded yet.
+export function fileKind(element: HTMLElement): 'changed' | 'new' | null {
+  if (!element.querySelector(CODE_CELL)) return null;
+  return isNewFile(element) ? 'new' : 'changed';
+}
+
 // What to do with one of GitHub's syntax token spans in a prose line:
 // fade it as markdown syntax, color it as a list bullet, hide it as a link
 // URL, or leave it.

@@ -1,5 +1,10 @@
 import { type Counts, parseCounts, whitespaceOnly } from './detect.ts';
-import { applyMarkdown, clearMarkdown, isMarkdownPath } from './markdown.ts';
+import {
+  applyMarkdown,
+  clearMarkdown,
+  fileKind,
+  isMarkdownPath,
+} from './markdown.ts';
 import { lineAnchor, nextFile } from './nav.ts';
 import {
   isReviewOrderHeading,
@@ -284,18 +289,22 @@ function markChevron(element: Element): void {
 // GitHub's collapse toggle, found by its label. The React view's chevron
 // takes its label from a tooltip that may not be rendered yet, so fall
 // back to the chevron when it reports an expanded state.
-// Switches a markdown file to GitHub's rich diff once per page, so a file
-// the user switched back to the source diff (to comment on a line) stays
-// there. Hashes are kept outside the DOM because the React view can
-// re-create the file container.
+// Switches a new markdown file to GitHub's rich diff once per page. A file
+// that existed before stays on the source diff: rich diff would render the
+// whole document, not just what changed. A file the user switched back to
+// the source diff (to comment on a line) stays there too. Hashes are kept
+// outside the DOM because the React view can re-create the file container.
 function openRichDiff(element: HTMLElement, hash: string, path: string): void {
   if (element.dataset.diffmute || richOpened.has(hash) || !isMarkdownPath(path))
     return;
+  const kind = fileKind(element);
+  if (!kind) return;
   const button = [...element.querySelectorAll('button')].find((b) =>
     /display the rich diff/i.test(labelOf(b))
   );
   if (!button) return;
   richOpened.add(hash);
+  if (kind !== 'new') return;
   if (button.getAttribute('aria-pressed') !== 'true') button.click();
 }
 
