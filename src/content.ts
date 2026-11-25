@@ -1,4 +1,5 @@
 import { type Counts, parseCounts, whitespaceOnly } from './detect.ts';
+import { applyMarkdown, clearMarkdown } from './markdown.ts';
 import { lineAnchor, nextFile } from './nav.ts';
 import {
   isReviewOrderHeading,
@@ -582,7 +583,7 @@ function treeLeafPath(node: Element): null | string {
   );
   if (text) return text;
   const hash = treeLeafHash(node);
-  return hash ? (pathCache.get(hash) ?? null) : null;
+  return hash ? pathCache.get(hash) ?? null : null;
 }
 
 function treeLeaves(): Element[] {
@@ -1031,7 +1032,7 @@ function openMenu(anchor: HTMLElement, hash: string): void {
   for (const c of globCats) select.append(new Option(c.name, c.id));
   select.value = globCats.some((c) => c.id === current)
     ? current!
-    : (globCats[0]?.id ?? '');
+    : globCats[0]?.id ?? '';
   const pick = document.createElement('label');
   pick.append('Add to ', select);
 
@@ -1403,7 +1404,8 @@ async function scan(): Promise<void> {
       seen.set(hash, cat?.id ?? null);
       applyFile(element, hash, cat);
       loadLargeDiff(element);
-      applyBadge(element, revisit ? (tag ?? undefined) : undefined);
+      if (config.features.markdown) applyMarkdown(element, path);
+      applyBadge(element, revisit ? tag ?? undefined : undefined);
       applyMuteButton(element, hash);
       if (!observed.has(element)) {
         observed.add(element);
@@ -1474,6 +1476,7 @@ function teardown(): void {
   navOrder = [];
   for (const b of document.querySelectorAll('.diffmute-badge')) b.remove();
   markTree('diffmute-tree-fresh', []);
+  clearMarkdown();
 }
 
 function toggleHelp(force?: boolean): void {
@@ -1597,6 +1600,7 @@ document.addEventListener(
 
 onConfigChange(() => {
   config = null;
+  clearMarkdown();
   seen.clear();
   barSignature = '';
   queueScan(0);

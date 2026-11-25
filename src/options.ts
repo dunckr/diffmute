@@ -74,6 +74,7 @@ function collect(): Config {
   }
   const features = {
     keys: $<HTMLInputElement>('#feature-keys').checked,
+    markdown: $<HTMLInputElement>('#feature-markdown').checked,
     order: $<HTMLInputElement>('#feature-order').checked,
     revisit: $<HTMLInputElement>('#feature-revisit').checked,
   };
@@ -118,6 +119,7 @@ function renderFeatures(): void {
   $<HTMLInputElement>('#feature-revisit').checked = state.features.revisit;
   $<HTMLInputElement>('#feature-order').checked = state.features.order;
   $<HTMLInputElement>('#feature-keys').checked = state.features.keys;
+  $<HTMLInputElement>('#feature-markdown').checked = state.features.markdown;
   const root = $('#tiers');
   root.replaceChildren();
   for (const id of TIER_IDS) {
@@ -156,7 +158,7 @@ function renderRepos(): void {
       ]) {
         select.append(new Option(text, value));
       }
-      select.value = o.enabled === false ? 'off' : (o.mode ?? '');
+      select.value = o.enabled === false ? 'off' : o.mode ?? '';
       label.append(select);
       overrides.append(label);
     }

@@ -23,6 +23,8 @@ export type Detect = 'deleted' | 'renamed' | 'unchanged' | 'whitespace';
 export interface Features {
   // Keyboard shortcuts for moving through the diff.
   keys: boolean;
+  // Reading styles for markdown files in the source diff.
+  markdown: boolean;
   // Reading order outline in the bar.
   order: boolean;
   // Collapse files whose patch is unchanged since you last read them.
@@ -264,7 +266,12 @@ const DEFAULT_TIERS: Readonly<Record<TierId, readonly string[]>> = {
   ],
 };
 
-const DEFAULT_FEATURES: Features = { keys: true, order: true, revisit: true };
+const DEFAULT_FEATURES: Features = {
+  keys: true,
+  markdown: true,
+  order: true,
+  revisit: true,
+};
 
 // First matching category wins; ignored paths never match. Structural
 // categories only match when the fact they detect is known to be true.
@@ -344,6 +351,7 @@ export function normalizeConfig(raw: unknown): Config {
   const f = (input.features ?? {}) as Partial<Features>;
   const features: Features = {
     keys: f.keys ?? DEFAULT_FEATURES.keys,
+    markdown: f.markdown ?? DEFAULT_FEATURES.markdown,
     order: f.order ?? DEFAULT_FEATURES.order,
     revisit: f.revisit ?? DEFAULT_FEATURES.revisit,
   };

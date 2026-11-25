@@ -260,3 +260,214 @@
 .diffmute-menu code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* ---- markdown reading styles ----
+   Each code cell in a markdown file has data-md naming the kind of line.
+   Prose gets a text font and size, headings get weight, space and color,
+   and markdown syntax is faded until you hover the line. Code and tables
+   stay monospace. Colors come from GitHub's theme variables, so they
+   follow the light or dark theme you picked on GitHub. */
+
+[data-diffmute-md] {
+  --md-h1: var(--fgColor-accent, #0969da);
+  --md-h2: var(--fgColor-accent, #0969da);
+  --md-h3: var(--fgColor-done, #8250df);
+  --md-h4: var(--fgColor-default, #1f2328);
+  --md-rule: var(--borderColor-accent-muted, #54aeff66);
+  --md-bullet: var(--fgColor-accent, #0969da);
+  --md-code-fg: var(--fgColor-done, #8250df);
+  --md-code-bg: var(--bgColor-done-muted, #c297ff26);
+  --md-mark: var(--bgColor-attention-muted, #d4a72c33);
+  --md-quote: var(--borderColor-done-muted, #c297ff66);
+  --md-syntax-fade: 0.2;
+}
+
+[data-diffmute-md] td.blob-code[data-md] .blob-code-inner {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+[data-diffmute-md]
+  td.blob-code:is(
+    [data-md='prose'],
+    [data-md='list'],
+    [data-md='quote'],
+    [data-md^='h']
+  )
+  .blob-code-inner {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+    Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  max-width: 78ch;
+  display: inline-block;
+  color: var(--fgColor-default, #1f2328);
+}
+
+/* Headings */
+
+[data-diffmute-md] td.blob-code[data-md^='h'] .blob-code-inner {
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h1'] {
+  padding-top: 12px;
+  padding-bottom: 6px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h1'] .blob-code-inner {
+  font-size: 26px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h2'] {
+  padding-top: 18px;
+  padding-bottom: 4px;
+  border-top: 2px solid var(--md-rule);
+}
+
+[data-diffmute-md] td.blob-code[data-md='h2'] .blob-code-inner {
+  font-size: 21px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h3'] {
+  padding-top: 10px;
+  padding-bottom: 2px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h3'] .blob-code-inner {
+  font-size: 17px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h4'] {
+  padding-top: 6px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='h1'] .pl-en {
+  color: var(--md-h1);
+}
+
+[data-diffmute-md] td.blob-code[data-md='h2'] .pl-en {
+  color: var(--md-h2);
+}
+
+[data-diffmute-md] td.blob-code[data-md='h3'] .pl-en {
+  color: var(--md-h3);
+}
+
+[data-diffmute-md] td.blob-code[data-md='h4'] .pl-en {
+  color: var(--md-h4);
+}
+
+/* Keep line numbers level with the text when a heading row is taller. */
+[data-diffmute-md] tr:has(> td.blob-code[data-md^='h']) > td {
+  vertical-align: baseline;
+}
+
+/* Syntax: the "## " prefix sits as plain text inside .pl-mh, around the
+   heading words in .pl-en, so it takes the faded color and .pl-en takes
+   its own. Other markers were tagged data-md-mark by the script. */
+
+[data-diffmute-md] td.blob-code[data-md^='h'] .pl-mh {
+  color: color-mix(
+    in srgb,
+    var(--fgColor-muted, #59636e) calc(var(--md-syntax-fade) * 100%),
+    transparent
+  );
+  transition: color 0.15s;
+}
+
+[data-diffmute-md] td.blob-code[data-md] [data-md-mark='syntax'],
+[data-diffmute-md] td.blob-code[data-md] .pl-ml {
+  color: var(--fgColor-muted, #59636e);
+  opacity: var(--md-syntax-fade);
+  transition: opacity 0.15s;
+}
+
+[data-diffmute-md] td.blob-code[data-md]:hover .pl-mh {
+  color: var(--fgColor-muted, #59636e);
+}
+
+[data-diffmute-md]
+  td.blob-code[data-md]:hover
+  :is([data-md-mark='syntax'], .pl-ml) {
+  opacity: 0.8;
+}
+
+[data-diffmute-md] td.blob-code[data-md] [data-md-mark='url'] {
+  display: none;
+}
+
+[data-diffmute-md] td.blob-code[data-md] [data-md-mark='bullet'] {
+  color: var(--md-bullet);
+  font-weight: 700;
+}
+
+::highlight(diffmute-md-link) {
+  color: var(--fgColor-accent, #0969da);
+  text-decoration: underline;
+  text-decoration-color: var(--md-rule);
+}
+
+::highlight(diffmute-md-strong) {
+  color: var(--fgColor-default, #1f2328);
+  background-color: var(--md-mark);
+  text-shadow:
+    0.35px 0 0 currentColor,
+    -0.35px 0 0 currentColor;
+}
+
+/* Inline code, quotes, code blocks and tables */
+
+[data-diffmute-md]
+  td.blob-code:not([data-md='code'], [data-md='fence'])
+  .pl-c1 {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.86em;
+  color: var(--md-code-fg);
+  background: var(--md-code-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+[data-diffmute-md] td.blob-code[data-md='quote'] {
+  box-shadow: inset 3px 0 0 var(--md-quote);
+}
+
+[data-diffmute-md] td.blob-code[data-md='quote'] .blob-code-inner {
+  color: var(--fgColor-muted, #59636e);
+  font-style: italic;
+}
+
+[data-diffmute-md] td.blob-code:is([data-md='code'], [data-md='fence']) {
+  background-image: linear-gradient(
+    var(--bgColor-neutral-muted, rgba(129, 139, 152, 0.1)),
+    var(--bgColor-neutral-muted, rgba(129, 139, 152, 0.1))
+  );
+}
+
+[data-diffmute-md] td.blob-code[data-md='table'] .blob-code-inner {
+  font-size: 12px;
+}
+
+/* In a new file every line is an addition, so the green tells you nothing.
+   Keep a thin green edge and drop the fill and the + markers. */
+[data-diffmute-md='new'] td.blob-code-addition,
+[data-diffmute-md='new'] td.blob-num-addition {
+  background-color: var(--bgColor-default, #fff) !important;
+}
+
+[data-diffmute-md='new'] td.blob-num-addition {
+  border-right: 3px solid var(--borderColor-success-muted, #4ac26b66);
+}
+
+[data-diffmute-md='new'] td.blob-code-addition .blob-code-marker::before {
+  visibility: hidden;
+}
+
+/* GitHub pins the +/- marker to the top of the cell. Heading rows have
+   padding above the text, so let the marker sit on the text's line. */
+[data-diffmute-md] td.blob-code[data-md] .blob-code-marker::before {
+  top: auto;
+  bottom: auto;
+}

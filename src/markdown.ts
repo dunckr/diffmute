@@ -1,0 +1,204 @@
+// Reading styles for markdown files in the source diff. Rich diff can't take
+// line comments, so the diff stays as it is: each code cell gets a
+// data-md attribute naming the kind of line, CSS styles it from there, and
+// bold text is marked with the CSS Highlight API so GitHub's DOM is never
+// rewritten.
+
+export type LineKind =
+  | 'blank'
+  | 'code'
+  | 'fence'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'list'
+  | 'prose'
+  | 'quote'
+  | 'rule'
+  | 'table';
+
+const MD_PATH = /\.(md|mdx|markdown)$/i;
+const FENCE = /^\s{0,3}(```|~~~)/;
+const HEADING = /^\s{0,3}(#{1,6})\s/;
+const CODE_CELL = 'td.blob-code';
+const HUNK_CELL = 'blob-code-hunk';
+const STRONG = 'diffmute-md-strong';
+const LINK = 'diffmute-md-link';
+const UNTAGGED = ':is(.pl-s, .pl-v, .pl-corl):not([data-md-mark])';
+const PROSE_CELL = `${CODE_CELL}[data-md]:not([data-md="code"], [data-md="fence"])`;
+
+interface Marked {
+  link: Range[];
+  strong: Range[];
+}
+
+export function isMarkdownPath(path: string): boolean {
+  return MD_PATH.test(path);
+}
+
+// Kinds for consecutive lines of one side of a hunk. A fence opened before
+// the hunk starts can't be seen, so those lines read as prose.
+export function lineKinds(lines: string[]): LineKind[] {
+  let fence: null | string = null;
+  return lines.map((line) => {
+    const f = FENCE.exec(line);
+    if (fence) {
+      if (f?.[1] !== fence) return 'code';
+      fence = null;
+      return 'fence';
+    }
+    if (f) {
+      fence = f[1];
+      return 'fence';
+    }
+    if (!line.trim()) return 'blank';
+    const h = HEADING.exec(line);
+    if (h) return `h${Math.min(h[1].length, 4)}` as LineKind;
+    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) return 'rule';
+    if (/^\s*>/.test(line)) return 'quote';
+    if (/^\s*\|/.test(line)) return 'table';
+    if (/^\s*([-*+]|\d+[.)])\s/.test(line)) return 'list';
+    if (/^( {4}|\t)/.test(line)) return 'code';
+    return 'prose';
+  });
+}
+
+const marked = new Map<HTMLElement, Marked>();
+
+export function applyMarkdown(element: HTMLElement, path: string): void {
+  if (!isMarkdownPath(path)) return;
+  const cells = element.querySelectorAll<HTMLElement>(CODE_CELL);
+  // The scan runs on every page change, so skip files already done.
+  // GitHub can swap in the syntax spans after the rows render, so spans
+  // without a tag mean the syntax needs marking again.
+  const signature = String(cells.length);
+  if (
+    element.dataset.diffmuteMd &&
+    element.dataset.diffmuteMdCells === signature
+  ) {
+    if (element.querySelector(`${PROSE_CELL} ${UNTAGGED}`)) {
+      marked.set(element, markSyntax(element));
+      paintHighlights();
+    }
+    return;
+  }
+  element.dataset.diffmuteMdCells = signature;
+  element.dataset.diffmuteMd = isNewFile(element) ? 'new' : 'changed';
+
+  // Split view puts old and new lines side by side, so each column is
+  // its own run of lines. A hunk header starts new runs.
+  let columns: HTMLElement[][] = [];
+  const runs: HTMLElement[][] = [];
+  for (const row of element.querySelectorAll('tr')) {
+    const code = [...row.querySelectorAll<HTMLElement>(CODE_CELL)];
+    if (code.length === 0) continue;
+    if (code.some((c) => c.classList.contains(HUNK_CELL))) {
+      runs.push(...columns);
+      columns = [];
+      continue;
+    }
+    for (const [index, cell] of code.entries())
+      (columns[index] ??= []).push(cell);
+  }
+  runs.push(...columns);
+
+  for (const run of runs) {
+    const kinds = lineKinds(run.map((cell) => lineText(cell)));
+    for (const [index, cell] of run.entries()) cell.dataset.md = kinds[index];
+  }
+  marked.set(element, markSyntax(element));
+  paintHighlights();
+}
+
+export function clearMarkdown(): void {
+  marked.clear();
+  if (typeof Highlight !== 'undefined') {
+    CSS.highlights?.delete(STRONG);
+    CSS.highlights?.delete(LINK);
+  }
+  for (const element of document.querySelectorAll<HTMLElement>(
+    '[data-diffmute-md]'
+  )) {
+    delete element.dataset.diffmuteMd;
+    delete element.dataset.diffmuteMdCells;
+  }
+}
+
+// What to do with one of GitHub's syntax token spans in a prose line:
+// fade it as markdown syntax, color it as a list bullet, hide it as a link
+// URL, or leave it.
+export function markerRole(
+  cls: string,
+  text: string
+): 'bullet' | 'syntax' | 'url' | null {
+  if (cls === 'pl-v') return /^([-*+]|\d+[.)])$/.test(text) ? 'bullet' : null;
+  if (cls === 'pl-corl') return 'url';
+  if (cls !== 'pl-s') return null;
+  return /^(\*\*|__|\*|_|~~|`+|\[|\]|\(|\))$/.test(text) ? 'syntax' : null;
+}
+
+function between(open: Element, close: Element): Range {
+  const range = new Range();
+  range.setStartAfter(open);
+  range.setEndBefore(close);
+  return range;
+}
+
+function isNewFile(element: HTMLElement): boolean {
+  return (
+    !!element.querySelector('td.blob-code-addition') &&
+    !element.querySelector('td.blob-code-deletion, td.blob-code-context')
+  );
+}
+
+function lineText(cell: HTMLElement): string {
+  return (cell.querySelector('.blob-code-inner') ?? cell).textContent ?? '';
+}
+
+// Tags the syntax spans CSS should hide or restyle, and collects the text
+// between ** pairs and inside [link] brackets. GitHub wraps the markers in
+// their own spans but not the text between them, so that text is marked
+// with the Highlight API instead.
+function markSyntax(element: HTMLElement): Marked {
+  const out: Marked = { link: [], strong: [] };
+  for (const cell of element.querySelectorAll<HTMLElement>(PROSE_CELL)) {
+    const spans = [
+      ...cell.querySelectorAll<HTMLElement>('.pl-s, .pl-v, .pl-corl'),
+    ];
+    for (const span of spans) {
+      const role = markerRole(span.className, span.textContent ?? '');
+      span.dataset.mdMark = role ?? 'plain';
+    }
+    // The parentheses around a link URL go with it.
+    for (const url of cell.querySelectorAll<HTMLElement>('.pl-corl')) {
+      for (const side of [url.previousElementSibling, url.nextElementSibling])
+        if (
+          side instanceof HTMLElement &&
+          /^[()]$/.test(side.textContent ?? '')
+        )
+          side.dataset.mdMark = 'url';
+    }
+    const bold = spans.filter((s) => /^(\*\*|__)$/.test(s.textContent ?? ''));
+    for (let index = 0; index + 1 < bold.length; index += 2)
+      out.strong.push(between(bold[index], bold[index + 1]));
+    let open: HTMLElement | null = null;
+    for (const span of spans) {
+      if (span.textContent === '[') open = span;
+      else if (span.textContent === ']' && open) {
+        out.link.push(between(open, span));
+        open = null;
+      }
+    }
+  }
+  return out;
+}
+
+function paintHighlights(): void {
+  if (typeof Highlight === 'undefined' || !CSS.highlights) return;
+  for (const element of marked.keys())
+    if (!element.isConnected) marked.delete(element);
+  const all = [...marked.values()];
+  CSS.highlights.set(STRONG, new Highlight(...all.flatMap((m) => m.strong)));
+  CSS.highlights.set(LINK, new Highlight(...all.flatMap((m) => m.link)));
+}

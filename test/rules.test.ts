@@ -129,7 +129,12 @@ test('features and tiers default and survive a round trip', () => {
     features: { keys: false },
     tiers: { ui: ['**/*.tsx', ' '] },
   });
-  assert.deepEqual(c.features, { keys: false, order: true, revisit: true });
+  assert.deepEqual(c.features, {
+    keys: false,
+    markdown: true,
+    order: true,
+    revisit: true,
+  });
   assert.deepEqual(c.tiers.ui, ['**/*.tsx']);
   assert.deepEqual(c.tiers.contracts, defaultConfig().tiers.contracts);
   assert.deepEqual(normalizeConfig(structuredClone(c)), c);
