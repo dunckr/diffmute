@@ -134,6 +134,7 @@ test('features and tiers default and survive a round trip', () => {
     markdown: true,
     order: true,
     revisit: true,
+    rich: true,
   });
   assert.deepEqual(c.tiers.ui, ['**/*.tsx']);
   assert.deepEqual(c.tiers.contracts, defaultConfig().tiers.contracts);

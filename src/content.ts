@@ -1,5 +1,5 @@
 import { type Counts, parseCounts, whitespaceOnly } from './detect.ts';
-import { applyMarkdown, clearMarkdown } from './markdown.ts';
+import { applyMarkdown, clearMarkdown, isMarkdownPath } from './markdown.ts';
 import { lineAnchor, nextFile } from './nav.ts';
 import {
   isReviewOrderHeading,
@@ -55,6 +55,7 @@ let shown = new Set<string>(); // category ids revealed on this PR
 const seen = new Map<string, null | string>(); // hash -> category id, survives virtualised unmounts
 const predicted = new Map<string, null | string>(); // hash -> category id by path, for diffs not rendered yet
 const userExpanded = new Set<string>(); // muted files the user opened by hand
+const richOpened = new Set<string>(); // markdown files switched to rich diff
 let classCache = new Map<string, null | string>(); // path -> category id, reset each scan
 const pathCache = new Map<string, string>(); // hash -> path
 const hashCache = new Map<string, string>(); // path -> hash
@@ -280,6 +281,24 @@ function markChevron(element: Element): void {
   if (chevron) chevron.dataset.diffmuteChevron = '';
 }
 
+// GitHub's collapse toggle, found by its label. The React view's chevron
+// takes its label from a tooltip that may not be rendered yet, so fall
+// back to the chevron when it reports an expanded state.
+// Switches a markdown file to GitHub's rich diff once per page, so a file
+// the user switched back to the source diff (to comment on a line) stays
+// there. Hashes are kept outside the DOM because the React view can
+// re-create the file container.
+function openRichDiff(element: HTMLElement, hash: string, path: string): void {
+  if (element.dataset.diffmute || richOpened.has(hash) || !isMarkdownPath(path))
+    return;
+  const button = [...element.querySelectorAll('button')].find((b) =>
+    /display the rich diff/i.test(labelOf(b))
+  );
+  if (!button) return;
+  richOpened.add(hash);
+  if (button.getAttribute('aria-pressed') !== 'true') button.click();
+}
+
 function pathCandidates(element: HTMLElement): string[] {
   const raw: (null | string | undefined)[] = [
     element.dataset.tagsearchPath,
@@ -293,6 +312,8 @@ function pathCandidates(element: HTMLElement): string[] {
   return [...new Set(raw.flatMap((r) => renameCandidates(clean(r))))];
 }
 
+// ---- collapse and hide ----
+
 async function pathHash(path: string): Promise<string> {
   let h = hashCache.get(path);
   if (!h) {
@@ -301,8 +322,6 @@ async function pathHash(path: string): Promise<string> {
   }
   return h;
 }
-
-// ---- collapse and hide ----
 
 async function resolvePath(
   element: HTMLElement,
@@ -373,9 +392,6 @@ async function sha256(s: string): Promise<string> {
     .join('');
 }
 
-// GitHub's collapse toggle, found by its label. The React view's chevron
-// takes its label from a tooltip that may not be rendered yet, so fall
-// back to the chevron when it reports an expanded state.
 function toggleButton(element: Element): HTMLButtonElement | null {
   const buttons = element.querySelectorAll<HTMLButtonElement>(
     'button[aria-expanded]'
@@ -583,7 +599,7 @@ function treeLeafPath(node: Element): null | string {
   );
   if (text) return text;
   const hash = treeLeafHash(node);
-  return hash ? pathCache.get(hash) ?? null : null;
+  return hash ? (pathCache.get(hash) ?? null) : null;
 }
 
 function treeLeaves(): Element[] {
@@ -1032,7 +1048,7 @@ function openMenu(anchor: HTMLElement, hash: string): void {
   for (const c of globCats) select.append(new Option(c.name, c.id));
   select.value = globCats.some((c) => c.id === current)
     ? current!
-    : globCats[0]?.id ?? '';
+    : (globCats[0]?.id ?? '');
   const pick = document.createElement('label');
   pick.append('Add to ', select);
 
@@ -1371,6 +1387,7 @@ async function scan(): Promise<void> {
       // A commit page shows different content for the same paths.
       seen.clear();
       predicted.clear();
+      richOpened.clear();
       tags.clear();
       factsCache.clear();
       fingerprints.clear();
@@ -1404,8 +1421,9 @@ async function scan(): Promise<void> {
       seen.set(hash, cat?.id ?? null);
       applyFile(element, hash, cat);
       loadLargeDiff(element);
+      if (config.features.rich) openRichDiff(element, hash, path);
       if (config.features.markdown) applyMarkdown(element, path);
-      applyBadge(element, revisit ? tag ?? undefined : undefined);
+      applyBadge(element, revisit ? (tag ?? undefined) : undefined);
       applyMuteButton(element, hash);
       if (!observed.has(element)) {
         observed.add(element);
@@ -1469,6 +1487,7 @@ function teardown(): void {
   seen.clear();
   predicted.clear();
   userExpanded.clear();
+  richOpened.clear();
   closeMenu();
   tags.clear();
   files = [];

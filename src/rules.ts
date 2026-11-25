@@ -29,6 +29,8 @@ export interface Features {
   order: boolean;
   // Collapse files whose patch is unchanged since you last read them.
   revisit: boolean;
+  // Open markdown files in GitHub's rich diff.
+  rich: boolean;
 }
 
 // What the content script knows about a file beyond its path. A missing or
@@ -271,6 +273,7 @@ const DEFAULT_FEATURES: Features = {
   markdown: true,
   order: true,
   revisit: true,
+  rich: true,
 };
 
 // First matching category wins; ignored paths never match. Structural
@@ -354,6 +357,7 @@ export function normalizeConfig(raw: unknown): Config {
     markdown: f.markdown ?? DEFAULT_FEATURES.markdown,
     order: f.order ?? DEFAULT_FEATURES.order,
     revisit: f.revisit ?? DEFAULT_FEATURES.revisit,
+    rich: f.rich ?? DEFAULT_FEATURES.rich,
   };
   const rawTiers = (input.tiers ?? {}) as Partial<Record<TierId, unknown>>;
   const tiers = {} as Record<TierId, string[]>;

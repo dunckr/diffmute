@@ -77,6 +77,7 @@ function collect(): Config {
     markdown: $<HTMLInputElement>('#feature-markdown').checked,
     order: $<HTMLInputElement>('#feature-order').checked,
     revisit: $<HTMLInputElement>('#feature-revisit').checked,
+    rich: $<HTMLInputElement>('#feature-rich').checked,
   };
   const ignore = lines($<HTMLTextAreaElement>('#global-ignore').value);
   return normalizeConfig({ categories, features, ignore, repos, tiers });
@@ -120,6 +121,7 @@ function renderFeatures(): void {
   $<HTMLInputElement>('#feature-order').checked = state.features.order;
   $<HTMLInputElement>('#feature-keys').checked = state.features.keys;
   $<HTMLInputElement>('#feature-markdown').checked = state.features.markdown;
+  $<HTMLInputElement>('#feature-rich').checked = state.features.rich;
   const root = $('#tiers');
   root.replaceChildren();
   for (const id of TIER_IDS) {
@@ -158,7 +160,7 @@ function renderRepos(): void {
       ]) {
         select.append(new Option(text, value));
       }
-      select.value = o.enabled === false ? 'off' : o.mode ?? '';
+      select.value = o.enabled === false ? 'off' : (o.mode ?? '');
       label.append(select);
       overrides.append(label);
     }
