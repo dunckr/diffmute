@@ -282,21 +282,22 @@
   --md-syntax-fade: 0.2;
 }
 
-[data-diffmute-md] td.blob-code[data-md] .blob-code-inner {
+[data-diffmute-md] td[data-md] :is(.blob-code-inner, [data-diff-text-inner]) {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 [data-diffmute-md]
-  td.blob-code:is(
+  td[data-md]:is(
     [data-md='prose'],
     [data-md='list'],
     [data-md='quote'],
     [data-md^='h']
   )
-  .blob-code-inner {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
-    Helvetica, Arial, sans-serif;
+  :is(.blob-code-inner, [data-diff-text-inner]) {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica,
+    Arial, sans-serif;
   font-size: 15px;
   line-height: 1.65;
   max-width: 78ch;
@@ -306,61 +307,69 @@
 
 /* Headings */
 
-[data-diffmute-md] td.blob-code[data-md^='h'] .blob-code-inner {
+[data-diffmute-md]
+  td[data-md^='h']
+  :is(.blob-code-inner, [data-diff-text-inner]) {
   font-weight: 650;
   line-height: 1.3;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h1'] {
+[data-diffmute-md] td[data-md='h1'] {
   padding-top: 12px;
   padding-bottom: 6px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h1'] .blob-code-inner {
+[data-diffmute-md]
+  td[data-md='h1']
+  :is(.blob-code-inner, [data-diff-text-inner]) {
   font-size: 26px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h2'] {
+[data-diffmute-md] td[data-md='h2'] {
   padding-top: 18px;
   padding-bottom: 4px;
   border-top: 2px solid var(--md-rule);
 }
 
-[data-diffmute-md] td.blob-code[data-md='h2'] .blob-code-inner {
+[data-diffmute-md]
+  td[data-md='h2']
+  :is(.blob-code-inner, [data-diff-text-inner]) {
   font-size: 21px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h3'] {
+[data-diffmute-md] td[data-md='h3'] {
   padding-top: 10px;
   padding-bottom: 2px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h3'] .blob-code-inner {
+[data-diffmute-md]
+  td[data-md='h3']
+  :is(.blob-code-inner, [data-diff-text-inner]) {
   font-size: 17px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h4'] {
+[data-diffmute-md] td[data-md='h4'] {
   padding-top: 6px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='h1'] .pl-en {
+[data-diffmute-md] td[data-md='h1'] .pl-en {
   color: var(--md-h1);
 }
 
-[data-diffmute-md] td.blob-code[data-md='h2'] .pl-en {
+[data-diffmute-md] td[data-md='h2'] .pl-en {
   color: var(--md-h2);
 }
 
-[data-diffmute-md] td.blob-code[data-md='h3'] .pl-en {
+[data-diffmute-md] td[data-md='h3'] .pl-en {
   color: var(--md-h3);
 }
 
-[data-diffmute-md] td.blob-code[data-md='h4'] .pl-en {
+[data-diffmute-md] td[data-md='h4'] .pl-en {
   color: var(--md-h4);
 }
 
 /* Keep line numbers level with the text when a heading row is taller. */
-[data-diffmute-md] tr:has(> td.blob-code[data-md^='h']) > td {
+[data-diffmute-md] tr:has(> td[data-md^='h']) > td {
   vertical-align: baseline;
 }
 
@@ -368,7 +377,7 @@
    heading words in .pl-en, so it takes the faded color and .pl-en takes
    its own. Other markers were tagged data-md-mark by the script. */
 
-[data-diffmute-md] td.blob-code[data-md^='h'] .pl-mh {
+[data-diffmute-md] td[data-md^='h'] .pl-mh {
   color: color-mix(
     in srgb,
     var(--fgColor-muted, #59636e) calc(var(--md-syntax-fade) * 100%),
@@ -377,28 +386,26 @@
   transition: color 0.15s;
 }
 
-[data-diffmute-md] td.blob-code[data-md] [data-md-mark='syntax'],
-[data-diffmute-md] td.blob-code[data-md] .pl-ml {
+[data-diffmute-md] td[data-md] [data-md-mark='syntax'],
+[data-diffmute-md] td[data-md] .pl-ml {
   color: var(--fgColor-muted, #59636e);
   opacity: var(--md-syntax-fade);
   transition: opacity 0.15s;
 }
 
-[data-diffmute-md] td.blob-code[data-md]:hover .pl-mh {
+[data-diffmute-md] td[data-md]:hover .pl-mh {
   color: var(--fgColor-muted, #59636e);
 }
 
-[data-diffmute-md]
-  td.blob-code[data-md]:hover
-  :is([data-md-mark='syntax'], .pl-ml) {
+[data-diffmute-md] td[data-md]:hover :is([data-md-mark='syntax'], .pl-ml) {
   opacity: 0.8;
 }
 
-[data-diffmute-md] td.blob-code[data-md] [data-md-mark='url'] {
+[data-diffmute-md] td[data-md] [data-md-mark='url'] {
   display: none;
 }
 
-[data-diffmute-md] td.blob-code[data-md] [data-md-mark='bullet'] {
+[data-diffmute-md] td[data-md] [data-md-mark='bullet'] {
   color: var(--md-bullet);
   font-weight: 700;
 }
@@ -419,9 +426,7 @@
 
 /* Inline code, quotes, code blocks and tables */
 
-[data-diffmute-md]
-  td.blob-code:not([data-md='code'], [data-md='fence'])
-  .pl-c1 {
+[data-diffmute-md] td[data-md]:not([data-md='code'], [data-md='fence']) .pl-c1 {
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
   font-size: 0.86em;
   color: var(--md-code-fg);
@@ -430,23 +435,27 @@
   padding: 1px 5px;
 }
 
-[data-diffmute-md] td.blob-code[data-md='quote'] {
+[data-diffmute-md] td[data-md='quote'] {
   box-shadow: inset 3px 0 0 var(--md-quote);
 }
 
-[data-diffmute-md] td.blob-code[data-md='quote'] .blob-code-inner {
+[data-diffmute-md]
+  td[data-md='quote']
+  :is(.blob-code-inner, [data-diff-text-inner]) {
   color: var(--fgColor-muted, #59636e);
   font-style: italic;
 }
 
-[data-diffmute-md] td.blob-code:is([data-md='code'], [data-md='fence']) {
+[data-diffmute-md] td[data-md]:is([data-md='code'], [data-md='fence']) {
   background-image: linear-gradient(
     var(--bgColor-neutral-muted, rgba(129, 139, 152, 0.1)),
     var(--bgColor-neutral-muted, rgba(129, 139, 152, 0.1))
   );
 }
 
-[data-diffmute-md] td.blob-code[data-md='table'] .blob-code-inner {
+[data-diffmute-md]
+  td[data-md='table']
+  :is(.blob-code-inner, [data-diff-text-inner]) {
   font-size: 12px;
 }
 
@@ -467,7 +476,33 @@
 
 /* GitHub pins the +/- marker to the top of the cell. Heading rows have
    padding above the text, so let the marker sit on the text's line. */
-[data-diffmute-md] td.blob-code[data-md] .blob-code-marker::before {
+[data-diffmute-md] td[data-md] .blob-code-marker::before {
   top: auto;
   bottom: auto;
+}
+
+/* The React diff view colors rows through these variables, so a new file
+   swaps them for the page background. Its +/- marker is a real span. */
+[data-diffmute-md='new'] {
+  --diffBlob-additionLine-bgColor: var(--bgColor-default, #fff);
+  --diffBlob-additionNum-bgColor: var(--bgColor-default, #fff);
+}
+
+[data-diffmute-md='new']
+  td[data-diff-cell='line-number'][data-diff-side='right'] {
+  box-shadow: inset -3px 0 0 var(--borderColor-success-muted, #4ac26b66);
+}
+
+[data-diffmute-md='new'] [data-diff-type='addition'] > [data-diff-text-marker] {
+  visibility: hidden;
+}
+
+[data-diffmute-md] td[data-md] [data-diff-text-inner] {
+  white-space: pre-wrap;
+}
+
+/* The React view lays out the +/- marker and the text side by side, so
+   line the marker up with the text's first line. */
+[data-diffmute-md] td[data-md] code:has(> [data-diff-text-inner]) {
+  align-items: baseline;
 }

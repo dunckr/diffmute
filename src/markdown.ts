@@ -21,12 +21,17 @@ export type LineKind =
 const MD_PATH = /\.(md|mdx|markdown)$/i;
 const FENCE = /^\s{0,3}(```|~~~)/;
 const HEADING = /^\s{0,3}(#{1,6})\s/;
-const CODE_CELL = 'td.blob-code';
-const HUNK_CELL = 'blob-code-hunk';
+// Classic diff view cells first, then the React view's. The React view's
+// class names are hashed, so it is matched on its data attributes.
+const CODE_CELL =
+  'td.blob-code:not(.blob-code-hunk), td[data-diff-cell="text"]';
+const HUNK_CELL = 'td.blob-code-hunk, td[data-diff-cell="hunk"]';
+const INNER = '.blob-code-inner, [data-diff-text-inner]';
 const STRONG = 'diffmute-md-strong';
 const LINK = 'diffmute-md-link';
 const UNTAGGED = ':is(.pl-s, .pl-v, .pl-corl):not([data-md-mark])';
-const PROSE_CELL = `${CODE_CELL}[data-md]:not([data-md="code"], [data-md="fence"])`;
+// data-md is only ever set on code cells, so it is enough to find them.
+const PROSE_CELL = 'td[data-md]:not([data-md="code"], [data-md="fence"])';
 
 interface Marked {
   link: Range[];
@@ -68,22 +73,20 @@ const marked = new Map<HTMLElement, Marked>();
 
 export function applyMarkdown(element: HTMLElement, path: string): void {
   if (!isMarkdownPath(path)) return;
-  const cells = element.querySelectorAll<HTMLElement>(CODE_CELL);
-  // The scan runs on every page change, so skip files already done.
-  // GitHub can swap in the syntax spans after the rows render, so spans
-  // without a tag mean the syntax needs marking again.
-  const signature = String(cells.length);
-  if (
-    element.dataset.diffmuteMd &&
-    element.dataset.diffmuteMdCells === signature
-  ) {
+  // The scan runs on every page change, so skip files already done. Rows
+  // can be added or re-created as the diff loads and scrolls, and GitHub
+  // can swap in the syntax spans after a row renders, so a cell or span
+  // without a tag means the file needs marking again.
+  const rowsDone =
+    !!element.dataset.diffmuteMd &&
+    !element.querySelector(`:is(${CODE_CELL}):not([data-md])`);
+  if (rowsDone) {
     if (element.querySelector(`${PROSE_CELL} ${UNTAGGED}`)) {
       marked.set(element, markSyntax(element));
       paintHighlights();
     }
     return;
   }
-  element.dataset.diffmuteMdCells = signature;
   element.dataset.diffmuteMd = isNewFile(element) ? 'new' : 'changed';
 
   // Split view puts old and new lines side by side, so each column is
@@ -91,13 +94,12 @@ export function applyMarkdown(element: HTMLElement, path: string): void {
   let columns: HTMLElement[][] = [];
   const runs: HTMLElement[][] = [];
   for (const row of element.querySelectorAll('tr')) {
-    const code = [...row.querySelectorAll<HTMLElement>(CODE_CELL)];
-    if (code.length === 0) continue;
-    if (code.some((c) => c.classList.contains(HUNK_CELL))) {
+    if (row.querySelector(HUNK_CELL)) {
       runs.push(...columns);
       columns = [];
       continue;
     }
+    const code = [...row.querySelectorAll<HTMLElement>(CODE_CELL)];
     for (const [index, cell] of code.entries())
       (columns[index] ??= []).push(cell);
   }
@@ -121,7 +123,6 @@ export function clearMarkdown(): void {
     '[data-diffmute-md]'
   )) {
     delete element.dataset.diffmuteMd;
-    delete element.dataset.diffmuteMdCells;
   }
 }
 
@@ -147,13 +148,18 @@ function between(open: Element, close: Element): Range {
 
 function isNewFile(element: HTMLElement): boolean {
   return (
-    !!element.querySelector('td.blob-code-addition') &&
-    !element.querySelector('td.blob-code-deletion, td.blob-code-context')
+    !!element.querySelector(
+      'td.blob-code-addition, [data-diff-type="addition"]'
+    ) &&
+    // An old-side line number means the file had lines before this PR.
+    !element.querySelector(
+      'td.blob-code-deletion, td.blob-code-context, td[data-diff-cell="line-number"][data-diff-side="left"]'
+    )
   );
 }
 
 function lineText(cell: HTMLElement): string {
-  return (cell.querySelector('.blob-code-inner') ?? cell).textContent ?? '';
+  return (cell.querySelector(INNER) ?? cell).textContent ?? '';
 }
 
 // Tags the syntax spans CSS should hide or restyle, and collects the text
